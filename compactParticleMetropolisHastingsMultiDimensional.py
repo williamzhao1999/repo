@@ -10,15 +10,12 @@ import time
 from scipy.stats import gamma
 from utils import multiple_logpdfs
 
-data_directory = "data/standard_graph"
+data_directory = "data/mini_graph"
  
 
-A = np.array([[0.75, 0], [0, 0.75]])
-B = np.array([[0.5, 0.0], [0.0, 0.7]])
-H = np.array([[0.75, 0.25], [0.25, 0.75]])
-lambda_poisson = np.array([50, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 55, 50, 45, 40, 35, 30, 25, 20, 15, 10, 5, 20])
-epislon = np.array([1.00, 1.00])
-omega = np.array([0.10, 0.10])
+
+lambda_poisson = np.array([50, 10, 15])
+
 time_consumed_per_hundred_iterations = 0
 
 f = open(data_directory+'/A_last.json')
@@ -40,7 +37,7 @@ h_matrix_shape = H_matrix.shape
 
 x_length = a_matrix_shape[0]
 y_length = h_matrix_shape[0]
-N_parameters = 24
+N_parameters = 3
 
 H = H_matrix
 B = B_matrix
@@ -174,28 +171,28 @@ def particleMetropolisHastings(observations, initialParameters, noParticles,
         
 
         # Write out progress
-        #if np.remainder(k, 100) == 0:
-        print("#####################################################################")
-        print(" Iteration: " + str(k) + " of : " + str(noIterations) + " completed.")
-        print("")
-        print(" Current state of the Markov chain:       ")
-        for i in range(N_parameters):
-            print(" %.4f" % lambda_array[k, i], end = '')
-        print(" Proposed next state of the Markov chain: ")
-        for i in range(N_parameters):
-            print(" %.4f" % lambda_proposed[k, i], end = '')
-        print(" Current posterior mean:                  " + "%.4f")
-        for i in range(N_parameters):
-            print(" %.4f" % np.mean(lambda_array[0:k, i]), end = '')
-        
-        print(" Current acceptance rate:                 " + "%.4f" % np.mean(proposedAccepted[0:k]) +  ".")
-        print("acceptProbability %.4f, Likelihood timestep k: %.4f, Likelihood timestep k-1: %.4f, division: %.4f" % (acceptProbability, logLikelihoodProposed[k], logLikelihood[k - 1],
-        np.exp(logLikelihoodProposed[k] - logLikelihood[k - 1])))
-        print("#####################################################################")
-        if time_consumed_per_hundred_iterations == 0:
-            time_consumed_per_hundred_iterations = time.time() - start_time
-        
-        print("Time consumed per 1 iterations: ", time_consumed_per_hundred_iterations)
+        if np.remainder(k, 100) == 0:
+            print("#####################################################################")
+            print(" Iteration: " + str(k) + " of : " + str(noIterations) + " completed.")
+            print("")
+            print(" Current state of the Markov chain:       ")
+            for i in range(N_parameters):
+                print(" %.4f" % lambda_array[k, i], end = '')
+            print(" Proposed next state of the Markov chain: ")
+            for i in range(N_parameters):
+                print(" %.4f" % lambda_proposed[k, i], end = '')
+            print(" Current posterior mean:                  " + "%.4f")
+            for i in range(N_parameters):
+                print(" %.4f" % np.mean(lambda_array[0:k, i]), end = '')
+            
+            print(" Current acceptance rate:                 " + "%.4f" % np.mean(proposedAccepted[0:k]) +  ".")
+            print("acceptProbability %.4f, Likelihood timestep k: %.4f, Likelihood timestep k-1: %.4f, acceptance probability: %.4f, uniform: %.4f" % (acceptProbability, logLikelihoodProposed[k], logLikelihood[k - 1],
+                acceptProbability, uniformRandomVariable))
+            print("#####################################################################")
+            if time_consumed_per_hundred_iterations == 0:
+                time_consumed_per_hundred_iterations = time.time() - start_time
+            
+            print("Time consumed per 1 iterations: ", time_consumed_per_hundred_iterations)
     
     return lambda_array
 
