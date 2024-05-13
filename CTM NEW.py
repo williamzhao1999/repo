@@ -14,7 +14,7 @@ import os
 dir_path = "./data/standard_graph"
 
 if os.path.isdir(dir_path) == False:
-    os.mkdir(dir_path) 
+    os.makedirs(dir_path) 
 
 np.random.seed(0)
 
