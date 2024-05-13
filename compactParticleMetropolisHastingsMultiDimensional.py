@@ -16,7 +16,7 @@ data_directory = "data/standard_graph"
 A = np.array([[0.75, 0], [0, 0.75]])
 B = np.array([[0.5, 0.0], [0.0, 0.7]])
 H = np.array([[0.75, 0.25], [0.25, 0.75]])
-lambda_poisson = np.array([1, 50, 70])
+lambda_poisson = np.array([50, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 55, 50, 45, 40, 35, 30, 25, 20, 15, 10, 5, 20])
 epislon = np.array([1.00, 1.00])
 omega = np.array([0.10, 0.10])
 time_consumed_per_hundred_iterations = 0
@@ -40,7 +40,7 @@ h_matrix_shape = H_matrix.shape
 
 x_length = a_matrix_shape[0]
 y_length = h_matrix_shape[0]
-N_parameters = 3
+N_parameters = 24
 
 H = H_matrix
 B = B_matrix
@@ -93,7 +93,7 @@ def particleFilter(observations, parameters, noParticles, initialState, particle
         #ancestorIndices[:, 1:t - 1] = ancestorIndices[newAncestors, 1:t - 1]
         #ancestorIndices[:, t] = newAncestors
 
-        x = particles[: ,t-1]
+        x = particles[newAncestors ,t-1]
         trans = np.matmul(x,A)
         u = B @ parameters
 
