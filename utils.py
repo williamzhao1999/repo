@@ -3,10 +3,6 @@ import numpy as np
 from pathlib import Path
 from scipy.stats import uniform
 
-from spring_mass_model import SpringMassModel
-from smcpy.utils.plotter import plot_pairwise
-from smcpy import AdaptiveSampler as Sampler
-from smcpy import VectorMCMC, VectorMCMCKernel
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns

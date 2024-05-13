@@ -10,7 +10,7 @@ import time
 from scipy.stats import gamma
 from utils import multiple_logpdfs
 
-data_directory = "data/mini_graph"
+data_directory = "data/standard_graph"
  
 
 A = np.array([[0.75, 0], [0, 0.75]])
