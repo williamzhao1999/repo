@@ -155,11 +155,12 @@ def particleMetropolisHastings(observations, initialParameters, noParticles,
 
         #sigmav prior
         # Compute the acceptance probability
-        acceptProbability = np.min((1.0, np.exp(prior + logLikelihoodProposed[k] - logLikelihood[k - 1])))
+        acceptProbability = np.min((0.0, prior + logLikelihoodProposed[k] - logLikelihood[k - 1]))
         
         # Accept / reject step
-        uniformRandomVariable = uniform()
+        uniformRandomVariable = np.log(uniform())
         if uniformRandomVariable < acceptProbability:
+            
             # Accept the parameter
             lambda_array[k] = lambda_proposed[k]
             logLikelihood[k] = logLikelihoodProposed[k]
