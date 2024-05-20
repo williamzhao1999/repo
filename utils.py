@@ -6,6 +6,9 @@ from scipy.stats import uniform
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
+import torch
+import math
+
 
 def update_diag_func(data, label, color):
     for val in data.quantile([.25, .5, .75]):
@@ -87,3 +90,30 @@ def multiple_logpdfs(x, means, covs):
     dim        = len(vals[0])
     log2pi     = np.log(2 * np.pi)
     return -0.5 * (dim * log2pi + mahas + logdets)
+
+def multiple_logpdfs_gpu(x, means, covs, device, pi2):
+    """Compute multivariate normal log PDF over multiple sets of parameters.
+    """
+    # NumPy broadcasts `eigh`.
+    vals, vecs = torch.linalg.eigh(covs)
+
+    # Compute the log determinants across the second axis.
+    logdets    = torch.sum(torch.log(vals), axis=1)
+
+    # Invert the eigenvalues.
+    valsinvs   = 1./vals
+    
+    # Add a dimension to `valsinvs` so that NumPy broadcasts appropriately.
+    Us         = vecs * torch.sqrt(valsinvs)[:, None]
+    devs       = x - means
+
+    # Use `einsum` for matrix-vector multiplications across the first dimension.
+    devUs      = torch.einsum('ni,nij->nj', devs, Us)
+
+    # Compute the Mahalanobis distance by squaring each term and summing.
+    mahas      = torch.sum(torch.square(devUs), axis=1)
+    
+    # Compute and broadcast scalar normalizers.
+    dim        = torch.tensor(vals[0].size(dim=0)).to(device)
+    log2pi     = torch.log(pi2)
+    return -torch.tensor(0.5).to(device) * (dim * log2pi + mahas + logdets)

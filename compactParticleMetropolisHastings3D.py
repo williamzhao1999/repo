@@ -10,12 +10,12 @@ from scipy.stats import gamma
 from scipy.stats import multivariate_normal as multivariate_norm
 from utils import multiple_logpdfs
 
-A = np.array([[0.75, 1], [0.0, 0.75]])
-B = np.array([[0.5, 0.0], [0.0, 0.7]])
-H = np.array([[0.75, 0.25], [0.25, 0.75]])
-lambda_poisson = np.array([1, 50])
-epislon = np.array([1.00, 1.00])
-omega = np.array([0.10, 0.10])
+A = np.diag([0.75, 0.75, 0.75])
+B = np.diag([0.35, 0.35, 0.35])
+H = np.diag([0.15, 0.15, 0.15])
+lambda_poisson = np.array([1, 50, 20])
+epislon = np.array([1.00, 1.00, 1.00])
+omega = np.array([0.10, 0.10, 0.10])
 
 time_consumed_per_hundred_iterations = 0
 # Set the random seed to replicate results in tutorial
@@ -24,14 +24,14 @@ np.random.seed(10)
 noObservations = 250
 initialState = 0
 
-initialLambda = [0, 0]
+initialLambda = [0, 0, 0]
 
 noParticles = 251           # Use noParticles ~ noObservations
 noBurnInIterations = 2000
 noIterations = 10000
-stepSize = np.diag((0.10**2, 0.10**2))
+stepSize = np.diag((0.10**2, 0.10**2, 0.10**2))
 
-N = 2
+N = 3
 
  
 def generateData(noObservations, initialState):
@@ -40,18 +40,18 @@ def generateData(noObservations, initialState):
     state[0] = initialState
     
     for t in range(1, noObservations):
-        #u = np.zeros(lambda_poisson.shape[0])
-        #for k in range(lambda_poisson.shape[0]):
-        #    u[k] = poisson.rvs(lambda_poisson[k], size=1)[0]
-        state[t] = state[t - 1] @ A + B @ lambda_poisson #+ epislon *randn()
+        u = np.zeros(lambda_poisson.shape[0])
+        for k in range(lambda_poisson.shape[0]):
+            u[k] = poisson.rvs(lambda_poisson[k], size=1)[0]
+        state[t] = A @ state[t - 1].T + B @ u #+ epislon *randn()
         observation[t] = H @ state[t] #+ omega * randn()
 
     return(state, observation)
 
 state, observations = generateData(noObservations, initialState)
 
-cov = np.eye(2) * 0.05
-yhatVariance = np.zeros((noParticles, 2, 2))
+cov = np.eye(3) * 0.05
+yhatVariance = np.zeros((noParticles, 3, 3))
 for i in range(noParticles):
     yhatVariance[i] = cov
 ##############################################################################
@@ -79,7 +79,7 @@ def particleFilter(observations, parameters, noParticles, initialState):
     xHatFiltered = np.zeros((noObservations, 1, dimension))
 
     # Set the initial state and weights
-    initialization_ancestors = np.array([range(noParticles),range(noParticles)]).T
+    initialization_ancestors = np.array([range(noParticles),range(noParticles),range(noParticles)]).T
     ancestorIndices[:, 0, :] = initialization_ancestors
     particles[:, 0] = initialState
     xHatFiltered[0] = initialState
@@ -88,30 +88,31 @@ def particleFilter(observations, parameters, noParticles, initialState):
 
     for t in range(1, noObservations):
         # Resample (multinomial)
-        #newAncestors = choice(noParticles, noParticles, p=normalisedWeights[:, t - 1], replace=True)
+        newAncestors = choice(noParticles, noParticles, p=normalisedWeights[:, t - 1], replace=True)
         #ancestorIndices[:, 1:t - 1] = ancestorIndices[newAncestors, 1:t - 1]
         #ancestorIndices[:, t] = newAncestors
-        
-        x = particles[: ,t-1]
+
+        x = particles[newAncestors ,t-1]
         trans = np.matmul(x,A)
         u = B @ parameters
 
-        v = randn(noParticles, N) * epislon
-        particles[:, t] = trans + u.T + v
+        v = randn(1, noParticles) * epislon.reshape(N,1)
+        particles[:, t] = trans + u.T + v.T
 
         yhatMean = particles[:, t] @ H.T
         
         weights[:, t] = multiple_logpdfs(observations[t + 1], yhatMean, yhatVariance)
 
-        
+        maxWeight = np.max(weights[:, t])
+        weights[:, t] = np.exp(weights[:, t] - maxWeight)
         sumWeights = np.sum(weights[:, t])
-        normalisedWeights[:, t] = weights[:, t] - sumWeights
+        normalisedWeights[:, t] = weights[:, t] / sumWeights
 
         # Estimate the state
         #xHatFiltered[t] = np.sum(normalisedWeights[:, t] * particles[:, t])
 
         # Estimate log-likelihood
-        predictiveLikelihood = sumWeights - np.log(noParticles)
+        predictiveLikelihood = maxWeight + np.log(sumWeights) - np.log(noParticles)
         #predictiveLikelihood = sumWeights - noParticles
         logLikelihood += predictiveLikelihood
 
@@ -135,25 +136,26 @@ def particleMetropolisHastings(observations, initialParameters, noParticles,
     initialParameters = np.array(initialParameters)
     # Set the initial parameter and estimate the initial log-likelihood
     lambda_array[0] = initialParameters
-
+    parameters = initialParameters.reshape(N,1)
     
-    _, logLikelihood[0] = particleFilter(observations, initialParameters, noParticles, initialState)
+    _, logLikelihood[0] = particleFilter(observations, parameters, noParticles, initialState)
     
     start_time = time.time()
     for k in range(1, noIterations):
         # Propose a new parameter
         
 
-        lambda_proposed[k, :] = lambda_array[k - 1, :] + multivariate_normal(mean = np.zeros(2), cov = stepSize)
+        lambda_proposed[k, :] = lambda_array[k - 1, :] + multivariate_normal(mean = np.zeros(3), cov = stepSize)
         prior = 0
         for i in range(N):
             prior += (gamma.logpdf(lambda_proposed[k, i], 1) - gamma.logpdf(lambda_array[k - 1, i], 1))
 
-        _, logLikelihoodProposed[k] = particleFilter(observations, lambda_proposed[k], noParticles, initialState)
+        parameters = lambda_proposed[k].reshape(N,1)
+        _, logLikelihoodProposed[k] = particleFilter(observations, parameters, noParticles, initialState)
 
         #sigmav prior
         # Compute the acceptance probability
-        acceptProbability = np.min((0.0, logLikelihoodProposed[k] - logLikelihood[k - 1]))
+        acceptProbability = np.min((0.0, prior + logLikelihoodProposed[k] - logLikelihood[k - 1]))
         
         # Accept / reject step
         uniformRandomVariable = np.log(uniform())
@@ -174,9 +176,9 @@ def particleMetropolisHastings(observations, initialParameters, noParticles,
             print("#####################################################################")
             print(" Iteration: " + str(k) + " of : " + str(noIterations) + " completed.")
             print("")
-            print(" Current state of the Markov chain:       " + "%.4f" % lambda_array[k,0] +  ", %.4f." %lambda_array[k,1])
-            print(" Proposed next state of the Markov chain: " + "%.4f" % lambda_proposed[k, 0] +  ", %.4f." %lambda_proposed[k,1])
-            print(" Current posterior mean:                  " + "%.4f" % np.mean(lambda_array[0:k, 0]) +  ", %.4f." % np.mean(lambda_array[0:k, 1]))
+            print(" Current state of the Markov chain:       " + "%.4f" % lambda_array[k,0] +  ", %.4f." %lambda_array[k,1] +", %.4f." %lambda_array[k,2])
+            print(" Proposed next state of the Markov chain: " + "%.4f" % lambda_proposed[k, 0] +  ", %.4f." %lambda_proposed[k,1]+", %.4f." %lambda_proposed[k,2])
+            print(" Current posterior mean:                  " + "%.4f" % np.mean(lambda_array[0:k, 0]) +  ", %.4f." % np.mean(lambda_array[0:k, 1]) +", %.4f." % np.mean(lambda_array[0:k, 2]))
             print(" Current acceptance rate:                 " + "%.4f" % np.mean(proposedAccepted[0:k]) +  ".")
             
             print("acceptProbability %.4f, Likelihood timestep k: %.4f, Likelihood timestep k-1: %.4f, uniform: %.4f" % (acceptProbability, logLikelihoodProposed[k], logLikelihood[k - 1],

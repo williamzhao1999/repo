@@ -9,13 +9,37 @@ import time
 from scipy.stats import gamma
 from scipy.stats import multivariate_normal as multivariate_norm
 from utils import multiple_logpdfs
+from scipy.special import logsumexp
 
-A = np.array([[0.75, 1], [0.0, 0.75]])
-B = np.array([[0.5, 0.0], [0.0, 0.7]])
-H = np.array([[0.75, 0.25], [0.25, 0.75]])
-lambda_poisson = np.array([1, 50])
-epislon = np.array([1.00, 1.00])
-omega = np.array([0.10, 0.10])
+A = np.array([[0.00028499273280664547, 5.878122876425919e-05, 0.0, 0.0, 0.0, 0.00010197564273771084, 0.00024896816516678093, 0.0, 0.0, 0.00023689944643100146, 0.011245010235017505, 0.0],
+             [5.878122876425913e-05, 1.2123933200010352e-05, 0.0, 0.0, 0.0, 2.1033005035305824e-05, 5.1350974909298284e-05, 0.0, 0.0, 4.886173909646562e-05, 0.0023193416638081594, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.00010197564273771075, 2.1033005035305828e-05, 0.0, 0.0, 0.0, 3.6488760991756576e-05, 8.908538970127382e-05, 0.0, 0.0, 8.476698011243442e-05, 0.004023671533709041, 0.0], [0.0005450924732055322, 0.0001124281487798803, 0.0, 0.0, 0.0, 0.00019504411484181684, 0.0004761899419810032, 0.0, 0.0, 0.00045310665954316216, 0.021507813128645102, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0005931403624393083, 0.00012233827505178966, 0.0, 0.0, 0.0, 0.00021223653353457305, 0.0005181643274499334, 0.0, 0.0, 0.0004930463388801162, 0.023403647457064164, 0.0], [0.025374749564744684, 0.005233673660068371, 0.0, 0.0, 0.0, 0.009079552207139473, 0.022167248892578588, 0.0, 0.0, 0.021092692666278192, 1.001216121395452, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]])
+B = np.array([[0.005555555555555556, 0.0, 0.0], [0.0, 0.005555555555555556, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.005555555555555556], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]])
+H = np.array([[1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0]])
+lambda_poisson = np.array([1, 50, 20])
+epislon = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+omega = np.array([0.10, 0.10, 0.10, 0.10])
+
+data_directory = "data/mini_graph"
+ 
+lambda_poisson = np.array([50, 10, 15])
+
+time_consumed_per_hundred_iterations = 0
+
+f = open(data_directory+'/A_last.json')
+A_matrix = np.array(json.load(f))
+f.close()
+
+f = open(data_directory+'/B.json')
+B_matrix = np.array(json.load(f)[-1])
+f.close()
+
+f = open(data_directory+'/H.json')
+H_matrix = np.array(json.load(f)[-1])
+f.close()
+
+A = A_matrix
+B = B_matrix
+H = H_matrix
 
 time_consumed_per_hundred_iterations = 0
 # Set the random seed to replicate results in tutorial
@@ -24,25 +48,22 @@ np.random.seed(10)
 noObservations = 250
 initialState = 0
 
-initialLambda = [0, 0]
+initialLambda = [0, 0, 0]
 
 noParticles = 251           # Use noParticles ~ noObservations
 noBurnInIterations = 2000
 noIterations = 10000
-stepSize = np.diag((0.10**2, 0.10**2))
+stepSize = np.diag((0.10**2, 0.10**2, 0.10**2))
 
-N = 2
+N = 3
 
  
 def generateData(noObservations, initialState):
-    state = np.zeros((noObservations + 1, N))
-    observation = np.zeros((noObservations, N))
+    state = np.zeros((noObservations + 1, 12))
+    observation = np.zeros((noObservations, 4))
     state[0] = initialState
     
     for t in range(1, noObservations):
-        #u = np.zeros(lambda_poisson.shape[0])
-        #for k in range(lambda_poisson.shape[0]):
-        #    u[k] = poisson.rvs(lambda_poisson[k], size=1)[0]
         state[t] = state[t - 1] @ A + B @ lambda_poisson #+ epislon *randn()
         observation[t] = H @ state[t] #+ omega * randn()
 
@@ -50,8 +71,15 @@ def generateData(noObservations, initialState):
 
 state, observations = generateData(noObservations, initialState)
 
-cov = np.eye(2) * 0.05
-yhatVariance = np.zeros((noParticles, 2, 2))
+with open('obs.json', 'w') as f:
+    json.dump(observations.tolist(), f)
+
+f = open(data_directory+'/obs.json')
+observations2 = np.array(json.load(f))
+f.close()
+
+cov = np.eye(4) * 0.05
+yhatVariance = np.zeros((noParticles, 4, 4))
 for i in range(noParticles):
     yhatVariance[i] = cov
 ##############################################################################
@@ -72,14 +100,18 @@ def particleFilter(observations, parameters, noParticles, initialState):
     noObservations, dimension = observations.shape
     noObservations = noObservations - 1
 
-    particles = np.zeros((noParticles, noObservations, dimension))
-    ancestorIndices = np.zeros((noParticles, noObservations, dimension))
+    particles = np.zeros((noParticles, noObservations, 12))
+    ancestorIndices = np.zeros((noParticles, noObservations, 12))
     weights = np.zeros((noParticles, noObservations))
     normalisedWeights = np.zeros((noParticles, noObservations))
-    xHatFiltered = np.zeros((noObservations, 1, dimension))
+    xHatFiltered = np.zeros((noObservations, 1, 12))
 
     # Set the initial state and weights
-    initialization_ancestors = np.array([range(noParticles),range(noParticles)]).T
+    initialization_ancestors = np.array([range(noParticles),
+    range(noParticles),range(noParticles),range(noParticles),
+    range(noParticles),range(noParticles),range(noParticles)
+    ,range(noParticles),range(noParticles),range(noParticles)
+    ,range(noParticles),range(noParticles)]).T
     ancestorIndices[:, 0, :] = initialization_ancestors
     particles[:, 0] = initialState
     xHatFiltered[0] = initialState
@@ -91,21 +123,22 @@ def particleFilter(observations, parameters, noParticles, initialState):
         #newAncestors = choice(noParticles, noParticles, p=normalisedWeights[:, t - 1], replace=True)
         #ancestorIndices[:, 1:t - 1] = ancestorIndices[newAncestors, 1:t - 1]
         #ancestorIndices[:, t] = newAncestors
-        
+
         x = particles[: ,t-1]
         trans = np.matmul(x,A)
         u = B @ parameters
 
-        v = randn(noParticles, N) * epislon
-        particles[:, t] = trans + u.T + v
+        v = randn(noParticles, 12) * epislon
+        particles[:, t] = trans + u.T
+        #particles[:, t] = particles[:, t] * v
 
         yhatMean = particles[:, t] @ H.T
         
         weights[:, t] = multiple_logpdfs(observations[t + 1], yhatMean, yhatVariance)
 
-        
-        sumWeights = np.sum(weights[:, t])
-        normalisedWeights[:, t] = weights[:, t] - sumWeights
+
+        sumWeights = logsumexp(weights[:, t])
+        #normalisedWeights[:, t] = weights[:, t] - sumWeights
 
         # Estimate the state
         #xHatFiltered[t] = np.sum(normalisedWeights[:, t] * particles[:, t])
@@ -126,8 +159,8 @@ def particleMetropolisHastings(observations, initialParameters, noParticles,
     global time_consumed_per_hundred_iterations
     running_time = time.time()
 
-    lambda_array = np.zeros((noIterations, observations.shape[1]))
-    lambda_proposed = np.zeros((noIterations, observations.shape[1]))
+    lambda_array = np.zeros((noIterations, 3))
+    lambda_proposed = np.zeros((noIterations, 3))
     logLikelihood = np.zeros((noIterations))
     logLikelihoodProposed = np.zeros((noIterations))
     proposedAccepted = np.zeros((noIterations))
@@ -135,7 +168,6 @@ def particleMetropolisHastings(observations, initialParameters, noParticles,
     initialParameters = np.array(initialParameters)
     # Set the initial parameter and estimate the initial log-likelihood
     lambda_array[0] = initialParameters
-
     
     _, logLikelihood[0] = particleFilter(observations, initialParameters, noParticles, initialState)
     
@@ -144,10 +176,11 @@ def particleMetropolisHastings(observations, initialParameters, noParticles,
         # Propose a new parameter
         
 
-        lambda_proposed[k, :] = lambda_array[k - 1, :] + multivariate_normal(mean = np.zeros(2), cov = stepSize)
+        lambda_proposed[k, :] = lambda_array[k - 1, :] + multivariate_normal(mean = np.zeros(3), cov = stepSize)
         prior = 0
-        for i in range(N):
-            prior += (gamma.logpdf(lambda_proposed[k, i], 1) - gamma.logpdf(lambda_array[k - 1, i], 1))
+        #for i in range(N):
+        #    prior += (gamma.logpdf(lambda_proposed[k, i], 1) - gamma.logpdf(lambda_array[k - 1, i], 1))
+
 
         _, logLikelihoodProposed[k] = particleFilter(observations, lambda_proposed[k], noParticles, initialState)
 
@@ -174,9 +207,9 @@ def particleMetropolisHastings(observations, initialParameters, noParticles,
             print("#####################################################################")
             print(" Iteration: " + str(k) + " of : " + str(noIterations) + " completed.")
             print("")
-            print(" Current state of the Markov chain:       " + "%.4f" % lambda_array[k,0] +  ", %.4f." %lambda_array[k,1])
-            print(" Proposed next state of the Markov chain: " + "%.4f" % lambda_proposed[k, 0] +  ", %.4f." %lambda_proposed[k,1])
-            print(" Current posterior mean:                  " + "%.4f" % np.mean(lambda_array[0:k, 0]) +  ", %.4f." % np.mean(lambda_array[0:k, 1]))
+            print(" Current state of the Markov chain:       " + "%.4f" % lambda_array[k,0] +  ", %.4f." %lambda_array[k,1] +", %.4f." %lambda_array[k,2])
+            print(" Proposed next state of the Markov chain: " + "%.4f" % lambda_proposed[k, 0] +  ", %.4f." %lambda_proposed[k,1]+", %.4f." %lambda_proposed[k,2])
+            print(" Current posterior mean:                  " + "%.4f" % np.mean(lambda_array[0:k, 0]) +  ", %.4f." % np.mean(lambda_array[0:k, 1]) +", %.4f." % np.mean(lambda_array[0:k, 2]))
             print(" Current acceptance rate:                 " + "%.4f" % np.mean(proposedAccepted[0:k]) +  ".")
             
             print("acceptProbability %.4f, Likelihood timestep k: %.4f, Likelihood timestep k-1: %.4f, uniform: %.4f" % (acceptProbability, logLikelihoodProposed[k], logLikelihood[k - 1],

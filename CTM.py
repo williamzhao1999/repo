@@ -160,7 +160,8 @@ class CTM:
         return [x for x in ps1 if x in ps2]
 
     def update_matrices(self, t):
-        if t > 10:      
+        if t == 0:
+            return True     
             '''
             # x_t+1 = A_t*x_t + B_t*u_t
             # x è un vettore di dimensione numero Links L per numero di percorso m, Lm x 1
@@ -173,6 +174,7 @@ class CTM:
             # è uguale alla densità del percorso passante per la cella i al tempo meno la densità entrante al tempo t in quel percorso
             # tutto diviso per la densità del percorso della cella i al tempo precedente
             '''
+            '''
             for i in range(len(self.cell_indexes)):
                 for j in range(self.num_paths):
                     row_index = (i*self.num_paths)+j
@@ -180,40 +182,61 @@ class CTM:
                     if self.ro[t][i][j] > 0:
                         w = self.B[t][row_index][j] * self.u[t][j]
                         self.A[t][row_index][column_index] = (self.ro[t+1][i][j] - w)/self.ro[t][i][j]
-            
-            ro_previous_flatten = self.ro[t].flatten()[:, np.newaxis] #(456,1)
-            ro_calculated_at_time_t = np.matmul(self.A[t] , ro_previous_flatten) #(456,456) x (456,1) = (456,)
-            ro_calculated_at_time_t = ro_calculated_at_time_t.flatten() # (456,1)
-            
-            W = np.matmul(self.B[t], self.u[t]) # (456, 24) x (24, 1) = (456,1)
-            ro_calculated_at_time_t = ro_calculated_at_time_t + W
+            '''
+        W = np.matmul(self.B[t - 1], self.u[t - 1]) # (456, 24) x (24, 1) = (456,1)
 
-            ro_flatten = self.ro[t+1].flatten()
-            truth_table_x = np.isclose(ro_calculated_at_time_t, ro_flatten)
+        
+        X_T = self.ro[t].flatten()
+        Y = X_T - W
+        X_T1 = self.ro[t - 1].flatten()
+        X_T1 = X_T1[:, np.newaxis]
+        X_T1_INVERSE = np.linalg.pinv(X_T1)
+        self.A[t - 1] = np.matmul(Y[:, np.newaxis], X_T1_INVERSE)
+        W = self.B[t - 1] @ self.u[t - 1]
+        ro_previous_flatten = self.ro[t - 1].flatten()[:, np.newaxis] #(456,1)
+        ro_calculated_at_time_t = np.matmul(self.A[t - 1] , ro_previous_flatten) #(456,456) x (456,1) = (456,)
+        ro_calculated_at_time_t = ro_calculated_at_time_t.flatten() # (456,1)
+        
+        #W = np.matmul(self.B[t], self.u[t]) # (456, 24) x (24, 1) = (456,1)
+        ro_calculated_at_time_t = ro_calculated_at_time_t + W
 
-            y_derived_ro_signed = (self.H[t] @ self.ro[t].flatten()[:, np.newaxis]).flatten()
-            truth_table_y = np.isclose(self.ro_signed[t], y_derived_ro_signed)
-            #print( (self.H[t] @ self.ro[t].flatten()[:, np.newaxis]).flatten())
-            #print(self.ro_signed[t])
+        ro_flatten = self.ro[t].flatten()
+        truth_table_x = np.isclose(ro_calculated_at_time_t, ro_flatten)
 
+        y_derived_ro_signed = (self.H[t] @ ro_calculated_at_time_t).flatten()
+        truth_table_y = np.isclose(self.ro_signed[t], y_derived_ro_signed)
+        #print( (self.H[t] @ self.ro[t].flatten()[:, np.newaxis]).flatten())
+        #print(self.ro_signed[t])
+
+        
+        if self.debug:
+            print(ro_calculated_at_time_t) # (456, 1)
+            print(ro_flatten)  
             
-            if self.debug:
-                print(ro_calculated_at_time_t) # (456, 1)
-                print(ro_flatten)  
-                
-                print(truth_table_x)
-                print(self.B[t])
+            print(truth_table_x)
+            print(self.B[t])
+        
+        if all(truth_table_x):
+            self.A_and_B_matrices_correct = self.A_and_B_matrices_correct & True 
             
-            if all(truth_table_x):
-                self.A_and_B_matrices_correct = self.A_and_B_matrices_correct & True 
-                
-            else:
-                self.A_and_B_matrices_correct = False
-            
-            if all(truth_table_y):
-                self.H_matrix_correct = self.H_matrix_correct & True 
-            else:
-                self.H_matrix_correct = False
+        else:
+            self.A_and_B_matrices_correct = False
+        
+        if all(truth_table_y):
+            self.H_matrix_correct = self.H_matrix_correct & True 
+        else:
+            self.H_matrix_correct = False
+
+    def generateData(self, noObservations, initialState):
+        state = np.zeros((noObservations + 1, len(self.cell_indexes) * self.num_paths))
+        observation = np.zeros((noObservations, len(self.cell_indexes)))
+        state[0] = initialState
+        
+        for t in range(1, noObservations):
+            state[t] = np.matmul(self.A[t - 1], state[t - 1].T) + np.matmul(self.B[t - 1],self.u[t - 1])
+            observation[t] = np.matmul(self.H[t], state[t])
+
+        return(state, observation)
 
     def simulate(self, hours):
 
@@ -472,6 +495,11 @@ class CTM:
         #    ro_signed_json[i].pop(0)
         
         print("Start saving all files:")
+
+        (state, observation) = self.generateData(T, self.ro[0].flatten())
+
+        with open(dir_path+'/obs.json', 'w') as f:
+            json.dump(observation.tolist(), f)
         
         with open(dir_path+'/densities.json', 'w') as f:
             json.dump(ro_signed_json, f)
@@ -504,6 +532,10 @@ class CTM:
         with open(dir_path+'/H.json', 'w') as f:
             json.dump(self.H.tolist(), f)
         print("Matrix H saved to H.json file") 
+
+        with open(dir_path+'/u.json', 'w') as f:
+            json.dump(self.u.tolist(), f)
+        print("Matrix u saved to u.json file") 
         
         print("All files are successfully saved!")
         
@@ -670,4 +702,4 @@ lambdas_rates =  [50, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 55, 50, 45, 40
 # 100 km/h free flow speed, 6000 veh/h maximum flow, 300 veh/km maximum density, 25km/h backward propagation speed, 0.5 km length cell
 ctm = CTM( G, paths, lambdas_rates, 100, 6000, 300, 25, 0.5, edges_labels, False)
 # output: densities of cells
-ctm.simulate(2)
+ctm.simulate(1)
