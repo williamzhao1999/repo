@@ -288,6 +288,7 @@ for t in range(N_parameters):
     plt.xlabel("phi")
     plt.ylabel("posterior density estimate")
     plt.axvline(np.mean(trace), color='k')
+    plt.axvline(lambdas[t], color='g')
 
     # Plot the trace of the Markov chain after burn-in (solid black line = posterior mean)
     plt.subplot(2, 1, 2)
@@ -295,6 +296,7 @@ for t in range(N_parameters):
     plt.xlabel("iteration")
     plt.ylabel("phi")
     plt.axhline(np.mean(trace), color='k')
+    plt.axvline(lambdas[t], color='g')
 
     plt.savefig(f"lambda_{t}.png")
 
