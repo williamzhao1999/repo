@@ -45,6 +45,10 @@ f = open(data_directory+'/lambdas.json')
 lambdas = np.array(json.load(f))
 f.close()
 
+f = open(data_directory+'/densities.json')
+observations = np.array(json.load(f))
+f.close()
+
 N_parameters = lambdas.shape[0]
 
 H = H_matrix
@@ -61,17 +65,20 @@ noBurnInIterations = 1
 noIterations = 100
 stepSize = np.eye(N_parameters) * (0.10**2)
 
+initialState = 0
+
 cov = np.eye(y_length) * 0.05
 yhatVariance = np.zeros((noParticles, y_length, y_length))
 for i in range(noParticles):
     yhatVariance[i] = cov
+
 
 print(f"A matrix shape: {A_matrix.shape}, B matrix shape: {B_matrix.shape}, H matrix shape: {H_matrix.shape}")
 
 ##############################################################################
 # Fully-adapted particle filter for the linear Gaussian SSM
 ##############################################################################
-def particleFilter(observations, parameters, noParticles, initialState, particleProposalDistribution, observationProposalDistribution):
+def particleFilter(observations, parameters, noParticles, initialState):
         
     noObservations, dimension = observations.shape
     noObservations = noObservations - 1
@@ -116,7 +123,7 @@ def particleFilter(observations, parameters, noParticles, initialState, particle
 # Particle Metropolis-Hastings (PMH) for the LGSS model
 ##############################################################################
 def particleMetropolisHastings(observations, initialParameters, noParticles, 
-        initialState, particleFilter, noIterations, stepSize, particleProposalDistribution, observationProposalDistribution):
+        initialState, particleFilter, noIterations, stepSize):
 
     global time_consumed_per_hundred_iterations
     start_time = time.time()
@@ -132,15 +139,14 @@ def particleMetropolisHastings(observations, initialParameters, noParticles,
     # Set the initial parameter and estimate the initial log-likelihood
     lambda_array[0] = initialParameters
     
-    _, logLikelihood[0] = particleFilter(observations, initialParameters, noParticles, initialState, particleProposalDistribution, observationProposalDistribution)
+    _, logLikelihood[0] = particleFilter(observations, initialParameters, noParticles, initialState)
     
     for k in range(1, noIterations):
         # Propose a new parameter
 
         lambda_proposed[k, :] = lambda_array[k - 1, :] + multivariate_normal(mean = np.zeros(N_parameters), cov = stepSize)
-        prior = 0
 
-        _, logLikelihoodProposed[k] = particleFilter(observations, lambda_proposed[k], noParticles, initialState, particleProposalDistribution, observationProposalDistribution)
+        _, logLikelihoodProposed[k] = particleFilter(observations, lambda_proposed[k], noParticles, initialState)
 
         # Compute the acceptance probability
         acceptProbability = np.min((0.0, logLikelihoodProposed[k] - logLikelihood[k - 1]))

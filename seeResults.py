@@ -14,7 +14,7 @@ from scipy.special import logsumexp
 from scipy import stats
 import os
 
-f = open('./result.json')
+f = open('./result_10000.json')
 results = np.array(json.load(f))
 f.close()
 
