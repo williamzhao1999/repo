@@ -51,11 +51,6 @@ H = H_matrix
 B = B_matrix
 A = A_matrix
 
-cov = np.eye(y_length) * 0.05
-yhatVariance = np.zeros((noParticles, y_length, y_length))
-for i in range(noParticles):
-    yhatVariance[i] = cov
-
 # Set the random seed to replicate results in tutorial
 np.random.seed(10)
 
@@ -65,6 +60,11 @@ noParticles = 251
 noBurnInIterations = 1
 noIterations = 100
 stepSize = np.eye(N_parameters) * (0.10**2)
+
+cov = np.eye(y_length) * 0.05
+yhatVariance = np.zeros((noParticles, y_length, y_length))
+for i in range(noParticles):
+    yhatVariance[i] = cov
 
 print(f"A matrix shape: {A_matrix.shape}, B matrix shape: {B_matrix.shape}, H matrix shape: {H_matrix.shape}")
 
