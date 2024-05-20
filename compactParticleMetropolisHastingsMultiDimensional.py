@@ -198,7 +198,7 @@ def particleMetropolisHastings(observations, initialParameters, noParticles,
             if time_consumed_per_hundred_iterations == 0:
                 time_consumed_per_hundred_iterations = time.time() - start_time
             
-            print("Time consumed per 1 iterations: ", time_consumed_per_hundred_iterations)
+            print("Time consumed per 100 iterations: ", time_consumed_per_hundred_iterations)
     
     return lambda_array
 
