@@ -8,9 +8,10 @@ from scipy.stats import multivariate_normal as multivariate_norm
 import json
 import time
 from scipy.stats import gamma
-from utils import multiple_logpdfs
+from utils import multiple_logpdfs, RMSE
 import torch
 from scipy.special import logsumexp
+from scipy import stats
 data_directory = "data/standard_graph"
  
 lambda_poisson = np.array([50, 10, 15])
@@ -273,8 +274,13 @@ print("Time consumed per 100 iterations: ", time_consumed_per_hundred_iterations
 noBins = int(np.floor(np.sqrt(noIterations - noBurnInIterations)))
 grid = np.arange(noBurnInIterations, noIterations, 1)
 
+burned_trace_mean = np.zeros(N_parameters)
+standard_deviation = 0
+
 for t in range(N_parameters):
     trace = trace_result[noBurnInIterations:noIterations, t]
+    burned_trace_mean[t] = np.mean(trace)
+    standard_deviation += np.std(trace)
 
     # Plot the parameter posterior estimate (solid black line = posterior mean)
     plt.subplot(2, 1, 1)
@@ -291,3 +297,6 @@ for t in range(N_parameters):
     plt.axhline(np.mean(trace), color='k')
 
     plt.show()
+
+print(f"RMSE: {RMSE(burned_trace_mean, lambdas)}")
+print(f"Std: {standard_deviation/N_parameters}")
