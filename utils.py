@@ -64,6 +64,9 @@ def plot_graph(samples, weights=None, param_names=None,
 
     return ax
 
+def RMSE(true, pred):
+    return np.sqrt(np.sum(np.mean((true - pred)**2))) 
+
 def multiple_logpdfs(x, means, covs):
     """Compute multivariate normal log PDF over multiple sets of parameters.
     """

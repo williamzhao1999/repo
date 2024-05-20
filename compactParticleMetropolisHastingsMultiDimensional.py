@@ -277,29 +277,17 @@ for t in range(N_parameters):
     trace = trace_result[noBurnInIterations:noIterations, t]
 
     # Plot the parameter posterior estimate (solid black line = posterior mean)
-    plt.subplot(3, 1, 1)
+    plt.subplot(2, 1, 1)
     plt.hist(trace, noBins, density=True, facecolor='#7570B3')
     plt.xlabel("phi")
     plt.ylabel("posterior density estimate")
     plt.axvline(np.mean(trace), color='k')
 
     # Plot the trace of the Markov chain after burn-in (solid black line = posterior mean)
-    plt.subplot(3, 1, 2)
+    plt.subplot(2, 1, 2)
     plt.plot(grid, trace, color='#7570B3')
     plt.xlabel("iteration")
     plt.ylabel("phi")
     plt.axhline(np.mean(trace), color='k')
-
-    # Plot the autocorrelation function
-    plt.subplot(3, 1, 3)
-    macf = np.correlate(trace - np.mean(trace), trace - np.mean(trace), mode='full')
-    idx = int(macf.size/2)
-    macf = macf[idx:]
-    macf = macf[0:noIterations]
-    macf /= macf[0]
-    grid = range(len(macf))
-    plt.plot(grid, macf, color='#7570B3')
-    plt.xlabel("lag")
-    plt.ylabel("ACF of phi")
 
     plt.show()
