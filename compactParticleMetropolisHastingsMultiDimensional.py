@@ -296,7 +296,7 @@ for t in range(N_parameters):
     plt.ylabel("phi")
     plt.axhline(np.mean(trace), color='k')
 
-    plt.show()
+    plt.savefig(f"lambda_{t}.png")
 
 print(f"RMSE: {RMSE(burned_trace_mean, lambdas)}")
 print(f"Std: {standard_deviation/N_parameters}")
