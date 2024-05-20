@@ -65,7 +65,7 @@ def plot_graph(samples, weights=None, param_names=None,
     return ax
 
 def RMSE(true, pred):
-    return np.sqrt(np.sum(np.mean((true - pred)**2))) 
+    return np.sqrt(np.mean((true - pred)**2))
 
 def multiple_logpdfs(x, means, covs):
     """Compute multivariate normal log PDF over multiple sets of parameters.
@@ -143,3 +143,14 @@ def plot(trace, noBins, grid, true_value, dir_path, name, parameter_name = "lamb
     plt.savefig(f"{dir_path}/{name}.png")
 
     plt.close()
+
+def generateData(noObservations, initialState):
+    state = np.zeros((noObservations + 1, x_length))
+    observation = np.zeros((noObservations, y_length))
+    state[0] = initialState
+    
+    for t in range(1, noObservations):
+        state[t] = np.matmul(A[t - 1], state[t - 1].T) + np.matmul(B[t - 1], u[t - 1])
+        observation[t] = np.matmul(H[t], state[t])
+
+    return(state, observation)
