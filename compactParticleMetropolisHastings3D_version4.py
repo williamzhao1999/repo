@@ -8,8 +8,10 @@ import json
 import time
 from scipy.stats import gamma
 from scipy.stats import multivariate_normal as multivariate_norm
-from utils import multiple_logpdfs
+from utils import multiple_logpdfs, RMSE, plot
 from scipy.special import logsumexp
+import os
+
 
 A = np.array([[0.00028499273280664547, 5.878122876425919e-05, 0.0, 0.0, 0.0, 0.00010197564273771084, 0.00024896816516678093, 0.0, 0.0, 0.00023689944643100146, 0.011245010235017505, 0.0],
              [5.878122876425913e-05, 1.2123933200010352e-05, 0.0, 0.0, 0.0, 2.1033005035305824e-05, 5.1350974909298284e-05, 0.0, 0.0, 4.886173909646562e-05, 0.0023193416638081594, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.00010197564273771075, 2.1033005035305828e-05, 0.0, 0.0, 0.0, 3.6488760991756576e-05, 8.908538970127382e-05, 0.0, 0.0, 8.476698011243442e-05, 0.004023671533709041, 0.0], [0.0005450924732055322, 0.0001124281487798803, 0.0, 0.0, 0.0, 0.00019504411484181684, 0.0004761899419810032, 0.0, 0.0, 0.00045310665954316216, 0.021507813128645102, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0005931403624393083, 0.00012233827505178966, 0.0, 0.0, 0.0, 0.00021223653353457305, 0.0005181643274499334, 0.0, 0.0, 0.0004930463388801162, 0.023403647457064164, 0.0], [0.025374749564744684, 0.005233673660068371, 0.0, 0.0, 0.0, 0.009079552207139473, 0.022167248892578588, 0.0, 0.0, 0.021092692666278192, 1.001216121395452, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]])
@@ -41,6 +43,10 @@ f = open(data_directory+'/u.json')
 u = np.array(json.load(f))
 f.close()
 
+f = open(data_directory+'/lambdas.json')
+lambdas = np.array(json.load(f))
+f.close()
+
 A = A_matrix
 B = B_matrix
 H = H_matrix
@@ -54,8 +60,8 @@ initialState = 0
 initialLambda = [0, 0, 0]
 
 noParticles = 251           # Use noParticles ~ noObservations
-noBurnInIterations = 2000
-noIterations = 10000
+noBurnInIterations = 10
+noIterations = 100
 stepSize = np.diag((0.10**2, 0.10**2, 0.10**2))
 
 N = 3
@@ -252,39 +258,31 @@ with open('data.json', 'w') as f:
 ##############################################################################
 # Plot the results
 ##############################################################################
-noBins = int(np.floor(np.sqrt(noIterations - noBurnInIterations)))
-grid = np.arange(noBurnInIterations, noIterations, 1)
+
+burned_trace_mean = np.zeros(N)
+standard_deviation = 0
+
+dir_path = "./images"
+
+if os.path.isdir(dir_path) == False:
+    os.makedirs(dir_path) 
 
 for t in range(N):
     trace = trace_result[noBurnInIterations:noIterations, t]
+    burned_trace_mean[t] = np.mean(trace)
+    standard_deviation += np.std(trace)
 
-    # Plot the parameter posterior estimate (solid black line = posterior mean)
-    plt.subplot(3, 1, 1)
-    plt.hist(trace, noBins, density=True, facecolor='#7570B3')
-    plt.xlabel("phi")
-    plt.ylabel("posterior density estimate")
-    plt.axvline(np.mean(trace), color='k')
+    noBins = int(np.floor(np.sqrt(noIterations - noBurnInIterations)))
+    grid = np.arange(noBurnInIterations, noIterations, 1)
+    plot(trace, noBins, grid, lambdas[t], dir_path, f"lambda_{t}")
 
-    # Plot the trace of the Markov chain after burn-in (solid black line = posterior mean)
-    plt.subplot(3, 1, 2)
-    plt.plot(grid, trace, color='#7570B3')
-    plt.xlabel("iteration")
-    plt.ylabel("phi")
-    plt.axhline(np.mean(trace), color='k')
+    trace_noburned = trace_result[:, t]
+    noBins2 = int(np.floor(np.sqrt(noIterations)))
+    grid2 = np.arange(0, noIterations, 1)
+    plot(trace_noburned, noBins2, grid2, lambdas[t], dir_path, f"lambda_{t}_noburned")
 
-    # Plot the autocorrelation function
-    plt.subplot(3, 1, 3)
-    macf = np.correlate(trace - np.mean(trace), trace - np.mean(trace), mode='full')
-    idx = int(macf.size/2)
-    macf = macf[idx:]
-    macf = macf[0:noIterations]
-    macf /= macf[0]
-    grid = range(len(macf))
-    plt.plot(grid, macf, color='#7570B3')
-    plt.xlabel("lag")
-    plt.ylabel("ACF of phi")
-
-    plt.show()
+print(f"RMSE: {RMSE(burned_trace_mean, lambdas)}")
+print(f"Std: {standard_deviation/N}")
 
 def observationProposalDistribution():
     pass

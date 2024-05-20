@@ -120,3 +120,26 @@ def multiple_logpdfs_gpu(x, means, covs, device, pi2):
     dim        = torch.tensor(vals[0].size(dim=0)).to(device)
     log2pi     = torch.log(pi2)
     return -torch.tensor(0.5).to(device) * (dim * log2pi + mahas + logdets)
+
+def plot(trace, noBins, grid, true_value, dir_path, name, parameter_name = "lambda"):
+
+
+    # Plot the parameter posterior estimate (solid black line = posterior mean)
+    plt.subplot(2, 1, 1)
+    plt.hist(trace, noBins, density=True, facecolor='#7570B3')
+    plt.xlabel(parameter_name)
+    plt.ylabel("posterior density estimate")
+    plt.axvline(np.mean(trace), color='k')
+    plt.axvline(true_value, color='g')
+
+    # Plot the trace of the Markov chain after burn-in (solid black line = posterior mean)
+    plt.subplot(2, 1, 2)
+    plt.plot(grid, trace, color='#7570B3')
+    plt.xlabel("iteration")
+    plt.ylabel(parameter_name)
+    plt.axhline(np.mean(trace), color='k')
+    plt.axhline(true_value, color='g')
+
+    plt.savefig(f"{dir_path}/{name}.png")
+
+    plt.close()

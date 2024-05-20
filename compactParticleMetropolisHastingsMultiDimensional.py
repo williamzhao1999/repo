@@ -8,10 +8,12 @@ from scipy.stats import multivariate_normal as multivariate_norm
 import json
 import time
 from scipy.stats import gamma
-from utils import multiple_logpdfs, RMSE
+from utils import multiple_logpdfs, RMSE, plot
 import torch
 from scipy.special import logsumexp
 from scipy import stats
+import os
+
 data_directory = "data/standard_graph"
  
 lambda_poisson = np.array([50, 10, 15])
@@ -226,8 +228,8 @@ noObservations = observations.shape[0]
 initialLambda = np.ones(N_parameters) * 0
 #initialLambda = [50, 10, 15]
 noParticles = 251  # Use noParticles ~ noObservations
-noBurnInIterations = 100
-noIterations = 10000
+noBurnInIterations = 1
+noIterations = 100
 stepSize = np.eye(N_parameters) * (0.10**2)
 
 #   particleProposalDistribution(t, particles[newAncestors, t - 1], phi, lambda_poisson, B_value, sigmav, noParticles)
@@ -267,38 +269,31 @@ trace_result = particleMetropolisHastings(
 with open(data_directory+'/result.json', 'w') as f:
     json.dump(trace_result.tolist(), f)
 
-print("Time consumed per 100 iterations: ", time_consumed_per_hundred_iterations)
 ##############################################################################
 # Plot the results
 ##############################################################################
-noBins = int(np.floor(np.sqrt(noIterations - noBurnInIterations)))
-grid = np.arange(noBurnInIterations, noIterations, 1)
 
 burned_trace_mean = np.zeros(N_parameters)
 standard_deviation = 0
+
+dir_path = "./images"
+
+if os.path.isdir(dir_path) == False:
+    os.makedirs(dir_path) 
 
 for t in range(N_parameters):
     trace = trace_result[noBurnInIterations:noIterations, t]
     burned_trace_mean[t] = np.mean(trace)
     standard_deviation += np.std(trace)
 
-    # Plot the parameter posterior estimate (solid black line = posterior mean)
-    plt.subplot(2, 1, 1)
-    plt.hist(trace, noBins, density=True, facecolor='#7570B3')
-    plt.xlabel("phi")
-    plt.ylabel("posterior density estimate")
-    plt.axvline(np.mean(trace), color='k')
-    plt.axvline(lambdas[t], color='g')
+    noBins = int(np.floor(np.sqrt(noIterations - noBurnInIterations)))
+    grid = np.arange(noBurnInIterations, noIterations, 1)
+    plot(trace, noBins, grid, lambdas[t], dir_path, f"lambda_{t}")
 
-    # Plot the trace of the Markov chain after burn-in (solid black line = posterior mean)
-    plt.subplot(2, 1, 2)
-    plt.plot(grid, trace, color='#7570B3')
-    plt.xlabel("iteration")
-    plt.ylabel("phi")
-    plt.axhline(np.mean(trace), color='k')
-    plt.axvline(lambdas[t], color='g')
-
-    plt.savefig(f"lambda_{t}.png")
+    trace_noburned = trace_result[:, t]
+    noBins2 = int(np.floor(np.sqrt(noIterations)))
+    grid2 = np.arange(0, noIterations, 1)
+    plot(trace_noburned, noBins2, grid2, lambdas[t], dir_path, f"lambda_{t}_noburned")
 
 print(f"RMSE: {RMSE(burned_trace_mean, lambdas)}")
 print(f"Std: {standard_deviation/N_parameters}")
