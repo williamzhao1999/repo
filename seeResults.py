@@ -13,6 +13,7 @@ import torch
 from scipy.special import logsumexp
 from scipy import stats
 import os
+import math
 
 f = open('./result_10000.json')
 results = np.array(json.load(f))
@@ -48,3 +49,19 @@ for t in range(N_parameters):
 
 print(f"RMSE: {np.sum(burned_trace_mean)}")
 print(f"Std: {np.sqrt(standard_deviation)}")
+
+RMSE = np.zeros(noIterations)
+for i in range(noIterations):
+    burned_trace_mean = np.zeros(N_parameters)
+    for t in range(N_parameters):
+        no_burn_iterations = math.floor((i*noBurnInIterations)/noIterations)
+        trace = results[no_burn_iterations:i, t]
+        burned_trace_mean[t] = np.sqrt(np.mean( (lambdas[t] - trace) ** 2))
+    RMSE[i] = np.sum(burned_trace_mean)
+
+plt.plot(RMSE, color='#7570B3')
+plt.xlabel("iteration")
+plt.ylabel("RMSE")
+plt.show()
+plt.savefig(f"{dir_path}/{name}.png")
+plt.close()
