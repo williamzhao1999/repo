@@ -72,7 +72,6 @@ yhatVariance = np.zeros((noParticles, y_length, y_length))
 for i in range(noParticles):
     yhatVariance[i] = cov
 
-
 print(f"A matrix shape: {A_matrix.shape}, B matrix shape: {B_matrix.shape}, H matrix shape: {H_matrix.shape}")
 
 ##############################################################################

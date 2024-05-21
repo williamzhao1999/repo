@@ -30,10 +30,21 @@ noIterations = 10000
 burned_trace_mean = np.zeros(N_parameters)
 standard_deviation = 0
 
+dir_path = "./images"
+
 for t in range(N_parameters):
     trace = results[noBurnInIterations:noIterations, t]
     burned_trace_mean[t] = np.sqrt(np.mean( (lambdas[t] - trace) ** 2))
     standard_deviation += np.var(trace)
+
+    noBins = int(np.floor(np.sqrt(noIterations - noBurnInIterations)))
+    grid = np.arange(noBurnInIterations, noIterations, 1)
+    plot(trace, noBins, grid, lambdas[t], dir_path, f"lambda_{t}")
+
+    trace_noburned = results[:, t]
+    noBins2 = int(np.floor(np.sqrt(noIterations)))
+    grid2 = np.arange(0, noIterations, 1)
+    plot(trace_noburned, noBins2, grid2, lambdas[t], dir_path, f"lambda_{t}_noburned")
 
 print(f"RMSE: {np.sum(burned_trace_mean)}")
 print(f"Std: {np.sqrt(standard_deviation)}")
