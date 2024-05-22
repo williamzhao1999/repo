@@ -143,12 +143,7 @@ def plot(trace, noBins, grid, true_value, dir_path, name, burned = True, paramet
 
     plt.savefig(f"{dir_path}/{name}.png")
 
-    name = 'lambdas'
-    if not burned:
-        name += '_noburned'
 
-    with open(dir_path+f'/{name}.json', 'w') as f:
-        json.dump(np.mean(trace).tolist(), f)
 
     plt.close()
 

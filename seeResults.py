@@ -39,6 +39,8 @@ if os.path.isdir(dir_path + "/" + str(noIterations) + "/") == False:
 if os.path.isdir(dir_path + "/best/") == False:
     os.makedirs(dir_path + "/best/") 
 
+lambdas_results = np.zeros(N_parameters)
+
 for t in range(N_parameters):
     trace = results[noBurnInIterations:noIterations, t]
     burned_trace_mean[t] = np.sqrt(np.mean( (lambdas[t] - trace) ** 2))
@@ -48,11 +50,15 @@ for t in range(N_parameters):
     grid = np.arange(noBurnInIterations, noIterations, 1)
     plot(trace, noBins, grid, lambdas[t], dir_path + "/" + str(noIterations) + "/", f"lambda_{t}")
 
+    lambdas_results[t] = np.mean(trace)
+
     trace_noburned = results[:, t]
     noBins2 = int(np.floor(np.sqrt(noIterations)))
     grid2 = np.arange(0, noIterations, 1)
     plot(trace_noburned, noBins2, grid2, lambdas[t], dir_path + "/" + str(noIterations) + "/", f"lambda_{t}_noburned", False)
 
+with open(dir_path+ "/" + str(noIterations) + "/" + f'/lambdas.json', 'w') as f:
+    json.dump(lambdas_results.tolist(), f)
 print(f"RMSE: {np.sum(burned_trace_mean)}")
 print(f"Std: {np.sqrt(standard_deviation)}")
 
@@ -61,6 +67,7 @@ VAR = np.zeros(noIterations)
 iteration_min = None
 current_min_rmse = float('inf')
 current_min_var = float('inf')
+
 
 for i in range(noIterations):
     burned_trace_mean = np.zeros(N_parameters)
@@ -81,6 +88,7 @@ for i in range(noIterations):
         current_min_var = VAR[i]
         trace_min = i
 
+lambdas_results = np.zeros(N_parameters)
 for t in range(N_parameters):
     no_burn_iterations = math.floor((trace_min*noBurnInIterations)/noIterations)
     trace = results[no_burn_iterations:trace_min, t]
@@ -88,11 +96,15 @@ for t in range(N_parameters):
     grid = np.arange(no_burn_iterations, trace_min, 1)
     plot(trace, noBins, grid, lambdas[t], dir_path + "/best/", f"lambda_{t}")
 
+    lambdas_results[t] = np.mean(trace)
+
     trace_noburned = results[:trace_min, t]
     noBins2 = int(np.floor(np.sqrt(trace_min)))
     grid2 = np.arange(0, trace_min, 1)
     plot(trace_noburned, noBins2, grid2, lambdas[t], dir_path + "/best/", f"lambda_{t}_noburned", False)
 
+with open(dir_path+f'/best/lambdas.json', 'w') as f:
+    json.dump(lambdas_results.tolist(), f)
 plt.plot(RMSE, color='#7570B3')
 plt.xlabel("iteration")
 plt.ylabel("RMSE")
