@@ -33,6 +33,12 @@ standard_deviation = 0
 
 dir_path = "./images"
 
+if os.path.isdir(dir_path + "/" + str(noIterations) + "/") == False:
+    os.makedirs(dir_path + "/" + str(noIterations) + "/") 
+
+if os.path.isdir(dir_path + "/best/") == False:
+    os.makedirs(dir_path + "/best/") 
+
 for t in range(N_parameters):
     trace = results[noBurnInIterations:noIterations, t]
     burned_trace_mean[t] = np.sqrt(np.mean( (lambdas[t] - trace) ** 2))
@@ -40,28 +46,67 @@ for t in range(N_parameters):
 
     noBins = int(np.floor(np.sqrt(noIterations - noBurnInIterations)))
     grid = np.arange(noBurnInIterations, noIterations, 1)
-    plot(trace, noBins, grid, lambdas[t], dir_path, f"lambda_{t}")
+    plot(trace, noBins, grid, lambdas[t], dir_path + "/" + str(noIterations) + "/", f"lambda_{t}")
 
     trace_noburned = results[:, t]
     noBins2 = int(np.floor(np.sqrt(noIterations)))
     grid2 = np.arange(0, noIterations, 1)
-    plot(trace_noburned, noBins2, grid2, lambdas[t], dir_path, f"lambda_{t}_noburned")
+    plot(trace_noburned, noBins2, grid2, lambdas[t], dir_path + "/" + str(noIterations) + "/", f"lambda_{t}_noburned", False)
 
 print(f"RMSE: {np.sum(burned_trace_mean)}")
 print(f"Std: {np.sqrt(standard_deviation)}")
 
 RMSE = np.zeros(noIterations)
+VAR = np.zeros(noIterations)
+iteration_min = None
+current_min_rmse = float('inf')
+current_min_var = float('inf')
+
 for i in range(noIterations):
     burned_trace_mean = np.zeros(N_parameters)
+    variance = 0
+    
     for t in range(N_parameters):
         no_burn_iterations = math.floor((i*noBurnInIterations)/noIterations)
         trace = results[no_burn_iterations:i, t]
+        
+        variance += np.var(trace)
         burned_trace_mean[t] = np.sqrt(np.mean( (lambdas[t] - trace) ** 2))
+
     RMSE[i] = np.sum(burned_trace_mean)
+    VAR[i] = variance
+
+    if RMSE[i] < current_min_rmse:
+        current_min_rmse = RMSE[i]
+        current_min_var = VAR[i]
+        trace_min = i
+
+for t in range(N_parameters):
+    no_burn_iterations = math.floor((trace_min*noBurnInIterations)/noIterations)
+    trace = results[no_burn_iterations:trace_min, t]
+    noBins = int(np.floor(np.sqrt(trace_min - no_burn_iterations)))
+    grid = np.arange(no_burn_iterations, trace_min, 1)
+    plot(trace, noBins, grid, lambdas[t], dir_path + "/best/", f"lambda_{t}")
+
+    trace_noburned = results[:trace_min, t]
+    noBins2 = int(np.floor(np.sqrt(trace_min)))
+    grid2 = np.arange(0, trace_min, 1)
+    plot(trace_noburned, noBins2, grid2, lambdas[t], dir_path + "/best/", f"lambda_{t}_noburned", False)
 
 plt.plot(RMSE, color='#7570B3')
 plt.xlabel("iteration")
 plt.ylabel("RMSE")
-plt.show()
-plt.savefig(f"{dir_path}/{name}.png")
+plt.savefig(f"{dir_path}/RMSE.png")
+plt.close()
+
+plt.plot(VAR, color='#7570B3')
+plt.xlabel("iteration")
+plt.ylabel("Variance")
+plt.savefig(f"{dir_path}/VAR.png")
+plt.close()
+
+plt.plot(np.sqrt(VAR), color='#7570B3')
+plt.xlabel("iteration")
+plt.ylabel("STD")
+plt.savefig(f"{dir_path}/STD.png")
 plt.close()

@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 import torch
+import json
 import math
 
 
@@ -121,7 +122,7 @@ def multiple_logpdfs_gpu(x, means, covs, device, pi2):
     log2pi     = torch.log(pi2)
     return -torch.tensor(0.5).to(device) * (dim * log2pi + mahas + logdets)
 
-def plot(trace, noBins, grid, true_value, dir_path, name, parameter_name = "lambda"):
+def plot(trace, noBins, grid, true_value, dir_path, name, burned = True, parameter_name = "lambda"):
 
 
     # Plot the parameter posterior estimate (solid black line = posterior mean)
@@ -141,6 +142,13 @@ def plot(trace, noBins, grid, true_value, dir_path, name, parameter_name = "lamb
     plt.axhline(true_value, color='g')
 
     plt.savefig(f"{dir_path}/{name}.png")
+
+    name = 'lambdas'
+    if not burned:
+        name += '_noburned'
+
+    with open(dir_path+f'/{name}.json', 'w') as f:
+        json.dump(np.mean(trace).tolist(), f)
 
     plt.close()
 
