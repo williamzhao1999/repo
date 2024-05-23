@@ -8,7 +8,7 @@ from scipy.stats import multivariate_normal as multivariate_norm
 import json
 import time
 from scipy.stats import gamma
-from utils import multiple_logpdfs, RMSE, plot
+from utils import multiple_logpdfs, RMSE, plot, EarlyStopping
 import torch
 from scipy.special import logsumexp
 from scipy import stats
@@ -61,8 +61,8 @@ np.random.seed(10)
 noObservations = 250
 initialLambda = np.ones(N_parameters) * 0
 noParticles = 251 
-noBurnInIterations = 1
-noIterations = 100
+noBurnInIterations = 10000
+noIterations = 100000
 stepSize = np.eye(N_parameters) * (0.10**2)
 
 initialState = 0
@@ -71,6 +71,8 @@ cov = np.eye(y_length) * 0.05
 yhatVariance = np.zeros((noParticles, y_length, y_length))
 for i in range(noParticles):
     yhatVariance[i] = cov
+
+early_stopping = EarlyStopping()
 
 print(f"A matrix shape: {A_matrix.shape}, B matrix shape: {B_matrix.shape}, H matrix shape: {H_matrix.shape}")
 
@@ -128,6 +130,8 @@ def particleMetropolisHastings(observations, initialParameters, noParticles,
     start_time = time.time()
     running_time = time.time()
 
+    
+
     lambda_array = np.zeros((noIterations, N_parameters))
     lambda_proposed = np.zeros((noIterations, N_parameters))
     logLikelihood = np.zeros((noIterations))
@@ -139,6 +143,8 @@ def particleMetropolisHastings(observations, initialParameters, noParticles,
     lambda_array[0] = initialParameters
     
     _, logLikelihood[0] = particleFilter(observations, initialParameters, noParticles, initialState)
+
+    
     
     for k in range(1, noIterations):
         # Propose a new parameter
@@ -165,6 +171,12 @@ def particleMetropolisHastings(observations, initialParameters, noParticles,
 
         # Write out progress
         if np.remainder(k, 100) == 0:
+            variance = 0
+            for t in range(N_parameters):
+                no_burn_iterations = math.floor((k*noBurnInIterations)/noIterations)
+                trace = results[no_burn_iterations:k, t]
+                variance += np.var(trace)
+
             print("#####################################################################")
             print(" Iteration: " + str(k) + " of : " + str(noIterations) + " completed.")
             print("")
@@ -186,6 +198,10 @@ def particleMetropolisHastings(observations, initialParameters, noParticles,
                 time_consumed_per_hundred_iterations = time.time() - start_time
             
             print("Time consumed per 100 iterations: ", time_consumed_per_hundred_iterations)
+
+            if early_stopping.verify(variance):
+                printf("Maximum perfomance reached, early stopping activated")
+                break
     
     running_time = time.time() - running_time
     print("Total running time: ", running_time)

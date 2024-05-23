@@ -157,3 +157,47 @@ def generateData(noObservations, initialState):
         observation[t] = np.matmul(H[t], state[t])
 
     return(state, observation)
+
+class EarlyStopping:
+    def __init__(self, stop_after_iterations):
+        self.phase1 = True # Reach max value variance
+        self.phase1_count_to_pass_phase2 = 0
+        self.phase2 = False # Reach min value after the max value of variance
+        self.phase2_count_to_pass_phase3 = 0
+        self.phase3 = False # Start to increase so stop
+        self.phase3_count = 0
+        self.variance = 0
+        self.stop_after_iterations = 1000 #stop after 1000 hundreds iterations incease to the least value stored
+    
+    def verify(self, new_variance): # True stop, False no stop
+        if self.phase1 == True:
+            if self.variance == 0:
+                self.variance = new_variance
+            else:
+                if self.variance > new_variance:
+                    phase1_count_to_pass_phase2 = phase1_count_to_pass_phase2 + 1
+                else:
+                    self.variance = new_variance
+                
+                if phase1_count_to_pass_phase2 >= self.stop_after_iterations:
+                    self.phase2 = True
+                    self.phase1 = False
+            
+        elif self.phase2 == True:
+            if self.variance > new_variance:
+                self.variance = new_variance
+            else:
+                phase2_count_to_pass_phase3 = phase2_count_to_pass_phase3 + 1
+                if phase2_count_to_pass_phase3 >= self.stop_after_iterations:
+                    self.phase2 = False
+                    self.phase3 = True
+            
+        elif self.phase3 == True:
+            if self.variance <= new_variance:
+                self.phase3_count = self.phase3_count + 1
+
+                if self.phase3_count >= self.stop_after_iterations:
+                    return True
+        
+        return False
+        
