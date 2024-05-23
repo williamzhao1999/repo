@@ -62,8 +62,8 @@ np.random.seed(10)
 noObservations = 250
 initialLambda = np.ones(N_parameters) * 0
 noParticles = 251 
-noBurnInIterations = 100
-noIterations = 1000
+noBurnInIterations = 10000
+noIterations = 100000
 stepSize = np.eye(N_parameters) * (0.10**2)
 
 initialState = 0
@@ -73,7 +73,7 @@ yhatVariance = np.zeros((noParticles, y_length, y_length))
 for i in range(noParticles):
     yhatVariance[i] = cov
 
-early_stopping = EarlyStopping(stop_after_iterations=10)
+early_stopping = EarlyStopping(stop_after_iterations=1)
 
 print(f"A matrix shape: {A_matrix.shape}, B matrix shape: {B_matrix.shape}, H matrix shape: {H_matrix.shape}")
 
@@ -153,9 +153,12 @@ def particleMetropolisHastings(observations, initialParameters, noParticles,
         lambda_proposed[k, :] = lambda_array[k - 1, :] + multivariate_normal(mean = np.zeros(N_parameters), cov = stepSize)
 
         _, logLikelihoodProposed[k] = particleFilter(observations, lambda_proposed[k], noParticles, initialState)
-
+        
+        #prior = 0
+        #for i in range(N_parameters):
+        #    prior += (gamma.logpdf(lambda_proposed[k, i], 2) - gamma.logpdf(lambda_array[k - 1, i], 2))
         # Compute the acceptance probability
-        acceptProbability = np.min((0.0, logLikelihoodProposed[k] - logLikelihood[k - 1]))
+        acceptProbability = np.min((0.0,  logLikelihoodProposed[k] - logLikelihood[k - 1]))
         
         # Accept / reject step
         uniformRandomVariable = np.log(uniform())

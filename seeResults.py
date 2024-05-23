@@ -8,14 +8,14 @@ from scipy.stats import multivariate_normal as multivariate_norm
 import json
 import time
 from scipy.stats import gamma
-from utils import multiple_logpdfs, RMSE, plot
+from utils import multiple_logpdfs, plot
 import torch
 from scipy.special import logsumexp
 from scipy import stats
 import os
 import math
 
-f = open('./result_100000.json')
+f = open('./result_10000.json')
 results = np.array(json.load(f))
 f.close()
 
@@ -29,7 +29,7 @@ noBurnInIterations = 10000
 noIterations = 100000
 
 burned_trace_mean = np.zeros(N_parameters)
-standard_deviation = 0
+var = 0
 
 dir_path = "./images"
 
@@ -44,7 +44,7 @@ lambdas_results = np.zeros(N_parameters)
 for t in range(N_parameters):
     trace = results[noBurnInIterations:noIterations, t]
     burned_trace_mean[t] = np.sqrt(np.mean( (lambdas[t] - trace) ** 2))
-    standard_deviation += np.var(trace)
+    var += np.var(trace, ddof=1)
 
     noBins = int(np.floor(np.sqrt(noIterations - noBurnInIterations)))
     grid = np.arange(noBurnInIterations, noIterations, 1)
@@ -60,7 +60,7 @@ for t in range(N_parameters):
 with open(dir_path+ "/" + str(noIterations) + "/" + f'/lambdas.json', 'w') as f:
     json.dump(lambdas_results.tolist(), f)
 print(f"RMSE: {np.sum(burned_trace_mean)}")
-print(f"Std: {np.sqrt(standard_deviation)}")
+print(f"Std: {np.sqrt(var)}")
 
 RMSE = np.zeros(noIterations)
 VAR = np.zeros(noIterations)
@@ -70,15 +70,14 @@ current_min_var = float('inf')
 
 
 for i in range(noIterations):
-    burned_trace_mean = np.zeros(N_parameters)
 
     no_burn_iterations = math.floor((i*noBurnInIterations)/noIterations)
     trace = results[no_burn_iterations:i]
     
-    variance = np.sum(np.var(results[no_burn_iterations:i],axis=0))
-    burned_trace_mean[t] = np.sqrt(np.mean( (lambdas[t] - trace) ** 2))
+    variance = np.sum(np.var(trace,axis=0, ddof=1))
+    rmse = np.sum(np.sqrt(np.mean( (lambdas - trace) ** 2,axis=0)))
 
-    RMSE[i] = np.sum(burned_trace_mean)
+    RMSE[i] = rmse
     VAR[i] = variance
 
     if RMSE[i] < current_min_rmse:
@@ -103,6 +102,7 @@ for t in range(N_parameters):
 
 with open(dir_path+f'/best/lambdas.json', 'w') as f:
     json.dump(lambdas_results.tolist(), f)
+
 plt.plot(RMSE, color='#7570B3')
 plt.xlabel("iteration")
 plt.ylabel("RMSE")
