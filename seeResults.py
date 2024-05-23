@@ -15,7 +15,7 @@ from scipy import stats
 import os
 import math
 
-f = open('./result_10000.json')
+f = open('./result_100000.json')
 results = np.array(json.load(f))
 f.close()
 
@@ -25,8 +25,8 @@ f.close()
 
 N_parameters = lambdas.shape[0]
 
-noBurnInIterations = 1000
-noIterations = 10000
+noBurnInIterations = 10000
+noIterations = 100000
 
 burned_trace_mean = np.zeros(N_parameters)
 standard_deviation = 0
@@ -71,14 +71,12 @@ current_min_var = float('inf')
 
 for i in range(noIterations):
     burned_trace_mean = np.zeros(N_parameters)
-    variance = 0
+
+    no_burn_iterations = math.floor((i*noBurnInIterations)/noIterations)
+    trace = results[no_burn_iterations:i]
     
-    for t in range(N_parameters):
-        no_burn_iterations = math.floor((i*noBurnInIterations)/noIterations)
-        trace = results[no_burn_iterations:i, t]
-        
-        variance += np.var(trace)
-        burned_trace_mean[t] = np.sqrt(np.mean( (lambdas[t] - trace) ** 2))
+    variance = np.sum(np.var(results[no_burn_iterations:i],axis=0))
+    burned_trace_mean[t] = np.sqrt(np.mean( (lambdas[t] - trace) ** 2))
 
     RMSE[i] = np.sum(burned_trace_mean)
     VAR[i] = variance

@@ -9,6 +9,7 @@ import seaborn as sns
 import torch
 import json
 import math
+import threading
 
 
 def update_diag_func(data, label, color):
@@ -158,6 +159,19 @@ def generateData(noObservations, initialState, x_length, y_length, A, B, u, H):
 
     return(state, observation)
 
+class BaseThread(threading.Thread):
+    def __init__(self, callback=None, method_arg=None, *args, **kwargs):
+        target = kwargs.pop('target')
+        super(BaseThread, self).__init__(target=self.target_with_callback, *args, **kwargs)
+        self.callback = callback
+        self.method = target
+        self.arg = method_arg
+
+    def target_with_callback(self):
+        val = self.method(*self.arg)
+        if self.callback is not None:
+            self.callback(val)
+
 class EarlyStopping:
     def __init__(self, stop_after_iterations=1000):
         self.phase1 = True # Reach max value variance
@@ -168,8 +182,36 @@ class EarlyStopping:
         self.phase3_count = 0
         self.variance = 0
         self.stop_after_iterations = stop_after_iterations #stop after 1000 hundreds iterations incease to the least value stored
+        self.stop = False
+
+    def setStopValue(self, stop_val):
+        self.stop = stop_val
     
+    def check(self):
+        return self.stop
+
+    def run(self, N_parameters, k, noBurnInIterations, noIterations, lambda_array):
+        thread = BaseThread(
+            name='verify',
+            target=self.calcVarianceAndVerify,
+            method_arg=(N_parameters, k, noBurnInIterations, noIterations, lambda_array),
+            callback=self.setStopValue
+        )
+
+        thread.start()
+
+    def calcVarianceAndVerify(self, N_parameters, k, noBurnInIterations, noIterations, lambda_array):
+        variance = 0
+        
+        for r in range(N_parameters):
+            no_burn_iterations = math.floor((k*noBurnInIterations)/noIterations)
+            trace_i = lambda_array[no_burn_iterations:k, r]
+            variance += np.var(trace_i)
+
+        return self.verify(variance)
+
     def verify(self, new_variance): # True stop, False no stop
+        print(f"Entered Thread New Variance: {new_variance}")
         if self.phase1:
             if self.variance == 0:
                 self.variance = new_variance
@@ -198,6 +240,6 @@ class EarlyStopping:
 
                 if self.phase3_count >= self.stop_after_iterations:
                     return True
-        
+        print("finish")
         return False
         

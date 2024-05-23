@@ -62,8 +62,8 @@ np.random.seed(10)
 noObservations = 250
 initialLambda = np.ones(N_parameters) * 0
 noParticles = 251 
-noBurnInIterations = 10000
-noIterations = 100000
+noBurnInIterations = 100
+noIterations = 1000
 stepSize = np.eye(N_parameters) * (0.10**2)
 
 initialState = 0
@@ -170,13 +170,27 @@ def particleMetropolisHastings(observations, initialParameters, noParticles,
             logLikelihood[k] = logLikelihood[k - 1]
             proposedAccepted[k] = 0.0
 
+
+        if early_stopping.check():
+            print("Maximum perfomance reached, early stopping activated")
+            break
+            
         # Write out progress
         if np.remainder(k, 100) == 0:
-            variance = 0
-            for r in range(N_parameters):
+            
+            early_stopping.run(N_parameters, k, noBurnInIterations, noIterations, lambda_array)
+            
+
+            
+            '''
+                        for r in range(N_parameters):
                 no_burn_iterations = math.floor((k*noBurnInIterations)/noIterations)
                 trace_i = lambda_array[no_burn_iterations:k, r]
                 variance += np.var(trace_i)
+                no_burn_iterations = math.floor((k*noBurnInIterations)/noIterations)
+                v = torch.FloatTensor(lambda_array[no_burn_iterations:k]).to('cuda')
+                variance = torch.sum(torch.var(v,axis=0)).cpu().numpy()
+            '''
 
             print("#####################################################################")
             print(" Iteration: " + str(k) + " of : " + str(noIterations) + " completed.")
@@ -200,9 +214,7 @@ def particleMetropolisHastings(observations, initialParameters, noParticles,
             
             print("Time consumed per 100 iterations: ", time_consumed_per_hundred_iterations)
 
-            if early_stopping.verify(variance):
-                print("Maximum perfomance reached, early stopping activated")
-                break
+
     
     running_time = time.time() - running_time
     print("Total running time: ", running_time)
