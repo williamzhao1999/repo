@@ -147,7 +147,7 @@ def plot(trace, noBins, grid, true_value, dir_path, name, burned = True, paramet
 
     plt.close()
 
-def generateData(noObservations, initialState):
+def generateData(noObservations, initialState, x_length, y_length, A, B, u, H):
     state = np.zeros((noObservations + 1, x_length))
     observation = np.zeros((noObservations, y_length))
     state[0] = initialState
@@ -159,7 +159,7 @@ def generateData(noObservations, initialState):
     return(state, observation)
 
 class EarlyStopping:
-    def __init__(self, stop_after_iterations):
+    def __init__(self, stop_after_iterations=1000):
         self.phase1 = True # Reach max value variance
         self.phase1_count_to_pass_phase2 = 0
         self.phase2 = False # Reach min value after the max value of variance
@@ -167,32 +167,32 @@ class EarlyStopping:
         self.phase3 = False # Start to increase so stop
         self.phase3_count = 0
         self.variance = 0
-        self.stop_after_iterations = 1000 #stop after 1000 hundreds iterations incease to the least value stored
+        self.stop_after_iterations = stop_after_iterations #stop after 1000 hundreds iterations incease to the least value stored
     
     def verify(self, new_variance): # True stop, False no stop
-        if self.phase1 == True:
+        if self.phase1:
             if self.variance == 0:
                 self.variance = new_variance
             else:
                 if self.variance > new_variance:
-                    phase1_count_to_pass_phase2 = phase1_count_to_pass_phase2 + 1
+                    self.phase1_count_to_pass_phase2 = self.phase1_count_to_pass_phase2 + 1
                 else:
                     self.variance = new_variance
                 
-                if phase1_count_to_pass_phase2 >= self.stop_after_iterations:
+                if self.phase1_count_to_pass_phase2 >= self.stop_after_iterations:
                     self.phase2 = True
                     self.phase1 = False
             
-        elif self.phase2 == True:
+        elif self.phase2:
             if self.variance > new_variance:
                 self.variance = new_variance
             else:
-                phase2_count_to_pass_phase3 = phase2_count_to_pass_phase3 + 1
-                if phase2_count_to_pass_phase3 >= self.stop_after_iterations:
+                self.phase2_count_to_pass_phase3 = self.phase2_count_to_pass_phase3 + 1
+                if self.phase2_count_to_pass_phase3 >= self.stop_after_iterations:
                     self.phase2 = False
                     self.phase3 = True
             
-        elif self.phase3 == True:
+        elif self.phase3:
             if self.variance <= new_variance:
                 self.phase3_count = self.phase3_count + 1
 

@@ -13,6 +13,7 @@ import torch
 from scipy.special import logsumexp
 from scipy import stats
 import os
+import math
 
 data_directory = "data/standard_graph"
 
@@ -72,7 +73,7 @@ yhatVariance = np.zeros((noParticles, y_length, y_length))
 for i in range(noParticles):
     yhatVariance[i] = cov
 
-early_stopping = EarlyStopping()
+early_stopping = EarlyStopping(stop_after_iterations=10)
 
 print(f"A matrix shape: {A_matrix.shape}, B matrix shape: {B_matrix.shape}, H matrix shape: {H_matrix.shape}")
 
@@ -172,10 +173,10 @@ def particleMetropolisHastings(observations, initialParameters, noParticles,
         # Write out progress
         if np.remainder(k, 100) == 0:
             variance = 0
-            for t in range(N_parameters):
+            for r in range(N_parameters):
                 no_burn_iterations = math.floor((k*noBurnInIterations)/noIterations)
-                trace = results[no_burn_iterations:k, t]
-                variance += np.var(trace)
+                trace_i = lambda_array[no_burn_iterations:k, r]
+                variance += np.var(trace_i)
 
             print("#####################################################################")
             print(" Iteration: " + str(k) + " of : " + str(noIterations) + " completed.")
@@ -200,7 +201,7 @@ def particleMetropolisHastings(observations, initialParameters, noParticles,
             print("Time consumed per 100 iterations: ", time_consumed_per_hundred_iterations)
 
             if early_stopping.verify(variance):
-                printf("Maximum perfomance reached, early stopping activated")
+                print("Maximum perfomance reached, early stopping activated")
                 break
     
     running_time = time.time() - running_time
