@@ -146,7 +146,7 @@ def particleMetropolisHastings(observations, initialParameters, noParticles,
     _, logLikelihood[0] = particleFilter(observations, initialParameters, noParticles, initialState)
 
     
-    
+    number_iterations_completed = 0
     for k in range(1, noIterations):
         # Propose a new parameter
 
@@ -173,6 +173,7 @@ def particleMetropolisHastings(observations, initialParameters, noParticles,
             logLikelihood[k] = logLikelihood[k - 1]
             proposedAccepted[k] = 0.0
 
+        number_iterations_completed = k
 
         if early_stopping.check():
             print("Maximum perfomance reached, early stopping activated")
@@ -221,7 +222,7 @@ def particleMetropolisHastings(observations, initialParameters, noParticles,
     
     running_time = time.time() - running_time
     print("Total running time: ", running_time)
-    return lambda_array
+    return lambda_array[0:number_iterations_completed, :]
 
 ##############################################################################
 # PMH
