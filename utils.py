@@ -201,14 +201,16 @@ class EarlyStopping:
         thread.start()
 
     def calcVarianceAndVerify(self, N_parameters, k, noBurnInIterations, noIterations, lambda_array):
-        '''
+        
         variance = 0
         
         for r in range(N_parameters):
             no_burn_iterations = math.floor((k*noBurnInIterations)/noIterations)
             trace_i = lambda_array[no_burn_iterations:k, r]
             variance += np.var(trace_i)
-        '''
+        
+
+        ''' for testing
         if k == 100:
             variance = 100
         elif k == 200:
@@ -221,12 +223,13 @@ class EarlyStopping:
             variance = 50
         else:
             variance = 60
+        '''
         return self.verify(variance)
 
     def verify(self, new_variance): # True stop, False no stop
         print(f"Entered Thread New Variance: {new_variance}")
         if self.phase1:
-            print("phase1")
+            
             if self.variance == 0:
                 self.variance = new_variance
             else:
@@ -240,7 +243,7 @@ class EarlyStopping:
                     self.phase1 = False
             
         elif self.phase2:
-            print("phase2")
+            
             if self.variance > new_variance:
                 self.variance = new_variance
             else:
@@ -250,12 +253,12 @@ class EarlyStopping:
                     self.phase3 = True
             
         elif self.phase3:
-            print("phase3")
+            
             if self.variance <= new_variance:
                 self.phase3_count = self.phase3_count + 1
 
                 if self.phase3_count >= self.stop_after_iterations:
                     return True
-        print("finish")
+        print("Finish thread")
         return False
         
