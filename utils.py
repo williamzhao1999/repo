@@ -4,9 +4,9 @@ from pathlib import Path
 from scipy.stats import uniform
 
 import matplotlib.pyplot as plt
-import pandas as pd
-import seaborn as sns
-import torch
+#import pandas as pd
+#import seaborn as sns
+#import torch
 import json
 import math
 import threading
@@ -17,14 +17,16 @@ def update_diag_func(data, label, color):
         plt.axvline(val, ls=':', color=color)
     plt.title(data.name, color=color)
 
+'''
 def plot_graph(samples, weights=None, param_names=None,
                   save=False, show=True, xlim=None, ylim=None,
                   filename='pairwise.png'):  # pragma no cover
     #TODO true params on plot #true_params=None,
-    '''
+    
+    
     Plots pairwise distributions of all parameter combos. Color codes each
     by weight if provided.
-    '''
+    
     if param_names is None:
         param_names = [f'p{i}' for i in range(samples.shape[1])]
 
@@ -68,7 +70,7 @@ def plot_graph(samples, weights=None, param_names=None,
 
 def RMSE(true, pred):
     return np.sqrt(np.mean((true - pred)**2))
-
+'''
 def multiple_logpdfs(x, means, covs):
     """Compute multivariate normal log PDF over multiple sets of parameters.
     """
@@ -96,6 +98,7 @@ def multiple_logpdfs(x, means, covs):
     log2pi     = np.log(2 * np.pi)
     return -0.5 * (dim * log2pi + mahas + logdets)
 
+'''
 def multiple_logpdfs_gpu(x, means, covs, device, pi2):
     """Compute multivariate normal log PDF over multiple sets of parameters.
     """
@@ -122,7 +125,7 @@ def multiple_logpdfs_gpu(x, means, covs, device, pi2):
     dim        = torch.tensor(vals[0].size(dim=0)).to(device)
     log2pi     = torch.log(pi2)
     return -torch.tensor(0.5).to(device) * (dim * log2pi + mahas + logdets)
-
+'''
 def plot(trace, noBins, grid, true_value, dir_path, name, burned = True, parameter_name = "lambda"):
 
 
@@ -147,6 +150,14 @@ def plot(trace, noBins, grid, true_value, dir_path, name, burned = True, paramet
 
 
     plt.close()
+
+def saveResults(dir_path, num_iterations, log_likelihood, acceptance_rate, log_likelihood_proposed):
+    with open(dir_path+  f'/log_likelihood.json', 'w') as f:
+        json.dump(log_likelihood[0:num_iterations], f)
+    with open(dir_path+  f'/acceptance_rate.json', 'w') as f:
+        json.dump(acceptance_rate[0:num_iterations], f)
+    with open(dir_path+  f'/log_likelihood_proposed.json', 'w') as f:
+        json.dump(log_likelihood_proposed[0:num_iterations], f)
 
 def generateData(noObservations, initialState, x_length, y_length, A, B, u, H):
     state = np.zeros((noObservations + 1, x_length))

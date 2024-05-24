@@ -8,8 +8,7 @@ from scipy.stats import multivariate_normal as multivariate_norm
 import json
 import time
 from scipy.stats import gamma
-from utils import multiple_logpdfs, RMSE, plot, EarlyStopping
-import torch
+from utils import multiple_logpdfs, plot, EarlyStopping, saveResults
 from scipy.special import logsumexp
 from scipy import stats
 import os
@@ -61,8 +60,8 @@ np.random.seed(10)
 num_observations = 250
 initial_lambda = np.ones(N_parameters) * 0
 num_particles = 251 
-num_burn_iterations = 10000
-num_iterations = 100000
+num_burn_iterations = 1
+num_iterations = 100
 stepSize = np.eye(N_parameters) * (0.10**2)
 
 initial_state = 0
@@ -134,7 +133,7 @@ def particleMetropolisHastings(observations, initialParameters, num_particles,
     lambda_proposed = np.zeros((num_iterations, N_parameters))
     log_likelihood = np.zeros((num_iterations))
     log_likelihood_proposed = np.zeros((num_iterations))
-    proposedAccepted = np.zeros((num_iterations))
+    proposed_accepted = np.zeros((num_iterations))
 
     initialParameters = np.array(initialParameters)
     # Set the initial parameter and estimate the initial log-likelihood
@@ -152,21 +151,20 @@ def particleMetropolisHastings(observations, initialParameters, num_particles,
         _, log_likelihood_proposed[k] = particleFilter(observations, lambda_proposed[k], num_particles, initial_state)
         
         # Assume uniform prior, so it cancels out in the acceptance ratio
-        acceptProbability = np.min((0.0,  log_likelihood_proposed[k] - log_likelihood[k - 1]))
+        accept_probability = np.min((0.0,  log_likelihood_proposed[k] - log_likelihood[k - 1]))
         
         # Accept / reject step
-        uniformRandomVariable = np.log(uniform())
-        if uniformRandomVariable < acceptProbability:
+        uniform_random_variable = np.log(uniform())
+        if uniform_random_variable < accept_probability:
             # Accept the parameter
             lambda_array[k] = lambda_proposed[k]
             log_likelihood[k] = log_likelihood_proposed[k]
-            proposedAccepted[k] = 1.0
+            proposed_accepted[k] = 1.0
         else:
             # Reject the parameter
             lambda_array[k] = lambda_array[k - 1]
             log_likelihood[k] = log_likelihood[k - 1]
-            proposedAccepted[k] = 0.0
-
+            proposed_accepted[k] = 0.0
 
         if early_stopping.check():
             number_iterations_completed = k
@@ -191,9 +189,10 @@ def particleMetropolisHastings(observations, initialParameters, num_particles,
             for i in range(N_parameters):
                 print(" %.4f" % np.mean(lambda_array[0:k, i]), end = '')
             
-            print(" Current acceptance rate:                 " + "%.4f" % np.mean(proposedAccepted[0:k]) +  ".")
-            print("acceptProbability %.4f, Likelihood timestep k: %.4f, Likelihood timestep k-1: %.4f, acceptance probability: %.4f, uniform: %.4f" % (acceptProbability, log_likelihood_proposed[k], log_likelihood[k - 1],
-                acceptProbability, uniformRandomVariable))
+            print(" Current acceptance rate:                 " + "%.4f" % np.mean(proposed_accepted[0:k]) +  ".")
+            print("acceptProbability %.4f, Likelihood timestep k: %.4f, Likelihood timestep k-1: %.4f, acceptance probability: %.4f, uniform: %.4f" % (
+                accept_probability, log_likelihood_proposed[k], log_likelihood[k - 1],
+                accept_probability, uniform_random_variable))
             print("#####################################################################")
             if time_consumed_per_hundred_iterations == 0:
                 time_consumed_per_hundred_iterations = time.time() - start_time
@@ -203,8 +202,10 @@ def particleMetropolisHastings(observations, initialParameters, num_particles,
     running_time = time.time() - running_time
     print("Total running time: ", running_time)
     if number_iterations_completed != -1:
+        saveResults(data_directory, number_iterations_completed, log_likelihood, proposed_accepted, log_likelihood_proposed )
         return lambda_array[0:number_iterations_completed, :]
     else:
+        saveResults(data_directory, k+1, log_likelihood, proposed_accepted, log_likelihood_proposed )
         return lambda_array
 
 ##############################################################################
