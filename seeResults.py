@@ -15,7 +15,7 @@ from scipy import stats
 import os
 import math
 
-f = open('./result_10000.json')
+f = open('./result_57000.json')
 results = np.array(json.load(f))
 f.close()
 
@@ -25,16 +25,19 @@ f.close()
 
 N_parameters = lambdas.shape[0]
 
-noBurnInIterations = 10000
-noIterations = 100000
+
+num_iterations = results.shape[0]
+num_burn_iterations = math.floor((num_iterations*10000)/100000)
+
+results = results[0:num_iterations,:]
 
 burned_trace_mean = np.zeros(N_parameters)
 var = 0
 
 dir_path = "./images"
 
-if os.path.isdir(dir_path + "/" + str(noIterations) + "/") == False:
-    os.makedirs(dir_path + "/" + str(noIterations) + "/") 
+if os.path.isdir(dir_path + "/" + str(num_iterations) + "/") == False:
+    os.makedirs(dir_path + "/" + str(num_iterations) + "/") 
 
 if os.path.isdir(dir_path + "/best/") == False:
     os.makedirs(dir_path + "/best/") 
@@ -42,36 +45,36 @@ if os.path.isdir(dir_path + "/best/") == False:
 lambdas_results = np.zeros(N_parameters)
 
 for t in range(N_parameters):
-    trace = results[noBurnInIterations:noIterations, t]
+    trace = results[num_burn_iterations:num_iterations, t]
     burned_trace_mean[t] = np.sqrt(np.mean( (lambdas[t] - trace) ** 2))
     var += np.var(trace, ddof=1)
 
-    noBins = int(np.floor(np.sqrt(noIterations - noBurnInIterations)))
-    grid = np.arange(noBurnInIterations, noIterations, 1)
-    plot(trace, noBins, grid, lambdas[t], dir_path + "/" + str(noIterations) + "/", f"lambda_{t}")
+    noBins = int(np.floor(np.sqrt(num_iterations - num_burn_iterations)))
+    grid = np.arange(num_burn_iterations, num_iterations, 1)
+    plot(trace, noBins, grid, lambdas[t], dir_path + "/" + str(num_iterations) + "/", f"lambda_{t}")
 
     lambdas_results[t] = np.mean(trace)
 
     trace_noburned = results[:, t]
-    noBins2 = int(np.floor(np.sqrt(noIterations)))
-    grid2 = np.arange(0, noIterations, 1)
-    plot(trace_noburned, noBins2, grid2, lambdas[t], dir_path + "/" + str(noIterations) + "/", f"lambda_{t}_noburned", False)
+    noBins2 = int(np.floor(np.sqrt(num_iterations)))
+    grid2 = np.arange(0, num_iterations, 1)
+    plot(trace_noburned, noBins2, grid2, lambdas[t], dir_path + "/" + str(num_iterations) + "/", f"lambda_{t}_noburned", False)
 
-with open(dir_path+ "/" + str(noIterations) + "/" + f'/lambdas.json', 'w') as f:
+with open(dir_path+ "/" + str(num_iterations) + "/" + f'/lambdas.json', 'w') as f:
     json.dump(lambdas_results.tolist(), f)
 print(f"RMSE: {np.sum(burned_trace_mean)}")
 print(f"Std: {np.sqrt(var)}")
 
-RMSE = np.zeros(noIterations)
-VAR = np.zeros(noIterations)
+RMSE = np.zeros(num_iterations)
+VAR = np.zeros(num_iterations)
 iteration_min = None
 current_min_rmse = float('inf')
 current_min_var = float('inf')
 
 
-for i in range(noIterations):
+for i in range(num_iterations):
 
-    no_burn_iterations = math.floor((i*noBurnInIterations)/noIterations)
+    no_burn_iterations = math.floor((i*num_burn_iterations)/num_iterations)
     trace = results[no_burn_iterations:i]
     
     variance = np.sum(np.var(trace,axis=0, ddof=1))
@@ -87,7 +90,7 @@ for i in range(noIterations):
 
 lambdas_results = np.zeros(N_parameters)
 for t in range(N_parameters):
-    no_burn_iterations = math.floor((trace_min*noBurnInIterations)/noIterations)
+    no_burn_iterations = math.floor((trace_min*num_burn_iterations)/num_iterations)
     trace = results[no_burn_iterations:trace_min, t]
     noBins = int(np.floor(np.sqrt(trace_min - no_burn_iterations)))
     grid = np.arange(no_burn_iterations, trace_min, 1)

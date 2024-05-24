@@ -56,21 +56,20 @@ H = H_matrix
 B = B_matrix
 A = A_matrix
 
-# Set the random seed to replicate results in tutorial
 np.random.seed(10)
 
-noObservations = 250
-initialLambda = np.ones(N_parameters) * 0
-noParticles = 251 
-noBurnInIterations = 10000
-noIterations = 100000
+num_observations = 250
+initial_lambda = np.ones(N_parameters) * 0
+num_particles = 251 
+num_burn_iterations = 10000
+num_iterations = 100000
 stepSize = np.eye(N_parameters) * (0.10**2)
 
-initialState = 0
+initial_state = 0
 
 cov = np.eye(y_length) * 0.05
-yhatVariance = np.zeros((noParticles, y_length, y_length))
-for i in range(noParticles):
+yhatVariance = np.zeros((num_particles, y_length, y_length))
+for i in range(num_particles):
     yhatVariance[i] = cov
 
 early_stopping = EarlyStopping(stop_after_iterations=2)
@@ -80,28 +79,28 @@ print(f"A matrix shape: {A_matrix.shape}, B matrix shape: {B_matrix.shape}, H ma
 ##############################################################################
 # Fully-adapted particle filter for the linear Gaussian SSM
 ##############################################################################
-def particleFilter(observations, parameters, noParticles, initialState):
+def particleFilter(observations, parameters, num_particles, initial_state):
         
-    noObservations, dimension = observations.shape
-    noObservations = noObservations - 1
+    num_observations, dimension = observations.shape
+    num_observations = num_observations - 1
 
-    particles = np.zeros((noParticles, noObservations, x_length))
-    ancestorIndices = np.zeros((noParticles, noObservations, x_length))
-    weights = np.zeros((noParticles, noObservations))
-    normalisedWeights = np.zeros((noParticles, noObservations))
-    xHatFiltered = np.zeros((noObservations, 1, x_length))
+    particles = np.zeros((num_particles, num_observations, x_length))
+    ancestorIndices = np.zeros((num_particles, num_observations, x_length))
+    weights = np.zeros((num_particles, num_observations))
+    normalisedWeights = np.zeros((num_particles, num_observations))
+    xHatFiltered = np.zeros((num_observations, 1, x_length))
 
     # Set the initial state and weights
-    initialization_ancestors = range(noParticles)
-    for i in range(x_length):
-        ancestorIndices[:, 0, i] = initialization_ancestors
+    #initialization_ancestors = range(num_particles)
+    #for i in range(x_length):
+    #    ancestorIndices[:, 0, i] = initialization_ancestors
 
-    particles[:, 0] = initialState
-    xHatFiltered[0] = initialState
-    normalisedWeights[:, 0] = 1.0 / noParticles
-    logLikelihood = 0
+    particles[:, 0] = initial_state
+    xHatFiltered[0] = initial_state
+    normalisedWeights[:, 0] = 1.0 / num_particles
+    log_likelihood = 0
 
-    for t in range(1, noObservations):
+    for t in range(1, num_observations):
     
         x = particles[: ,t-1]
         trans = np.matmul(A[t-1], x.T)
@@ -116,61 +115,56 @@ def particleFilter(observations, parameters, noParticles, initialState):
         sumWeights = logsumexp(weights[:, t])
 
         # Estimate log-likelihood
-        predictiveLikelihood = sumWeights - np.log(noParticles)
-        logLikelihood += predictiveLikelihood
+        predictiveLikelihood = sumWeights - np.log(num_particles)
+        log_likelihood += predictiveLikelihood
 
-    return xHatFiltered, logLikelihood
+    return xHatFiltered, log_likelihood
 
 ##############################################################################
 # Particle Metropolis-Hastings (PMH) for the LGSS model
 ##############################################################################
-def particleMetropolisHastings(observations, initialParameters, noParticles, 
-        initialState, particleFilter, noIterations, stepSize):
+def particleMetropolisHastings(observations, initialParameters, num_particles, 
+        initial_state, particleFilter, num_iterations, stepSize):
 
     global time_consumed_per_hundred_iterations
     start_time = time.time()
     running_time = time.time()
 
-    
-
-    lambda_array = np.zeros((noIterations, N_parameters))
-    lambda_proposed = np.zeros((noIterations, N_parameters))
-    logLikelihood = np.zeros((noIterations))
-    logLikelihoodProposed = np.zeros((noIterations))
-    proposedAccepted = np.zeros((noIterations))
+    lambda_array = np.zeros((num_iterations, N_parameters))
+    lambda_proposed = np.zeros((num_iterations, N_parameters))
+    log_likelihood = np.zeros((num_iterations))
+    log_likelihood_proposed = np.zeros((num_iterations))
+    proposedAccepted = np.zeros((num_iterations))
 
     initialParameters = np.array(initialParameters)
     # Set the initial parameter and estimate the initial log-likelihood
     lambda_array[0] = initialParameters
     
-    _, logLikelihood[0] = particleFilter(observations, initialParameters, noParticles, initialState)
+    _, log_likelihood[0] = particleFilter(observations, initialParameters, num_particles, initial_state)
 
     
     number_iterations_completed = -1
-    for k in range(1, noIterations):
+    for k in range(1, num_iterations):
         # Propose a new parameter
 
         lambda_proposed[k, :] = lambda_array[k - 1, :] + multivariate_normal(mean = np.zeros(N_parameters), cov = stepSize)
 
-        _, logLikelihoodProposed[k] = particleFilter(observations, lambda_proposed[k], noParticles, initialState)
+        _, log_likelihood_proposed[k] = particleFilter(observations, lambda_proposed[k], num_particles, initial_state)
         
-        #prior = 0
-        #for i in range(N_parameters):
-        #    prior += (gamma.logpdf(lambda_proposed[k, i], 2) - gamma.logpdf(lambda_array[k - 1, i], 2))
-        # Compute the acceptance probability
-        acceptProbability = np.min((0.0,  logLikelihoodProposed[k] - logLikelihood[k - 1]))
+        # Assume uniform prior, so it cancels out in the acceptance ratio
+        acceptProbability = np.min((0.0,  log_likelihood_proposed[k] - log_likelihood[k - 1]))
         
         # Accept / reject step
         uniformRandomVariable = np.log(uniform())
         if uniformRandomVariable < acceptProbability:
             # Accept the parameter
             lambda_array[k] = lambda_proposed[k]
-            logLikelihood[k] = logLikelihoodProposed[k]
+            log_likelihood[k] = log_likelihood_proposed[k]
             proposedAccepted[k] = 1.0
         else:
             # Reject the parameter
             lambda_array[k] = lambda_array[k - 1]
-            logLikelihood[k] = logLikelihood[k - 1]
+            log_likelihood[k] = log_likelihood[k - 1]
             proposedAccepted[k] = 0.0
 
 
@@ -182,22 +176,10 @@ def particleMetropolisHastings(observations, initialParameters, noParticles,
         # Write out progress
         if np.remainder(k, 100) == 0:
             
-            early_stopping.run(N_parameters, k, noBurnInIterations, noIterations, lambda_array)
-            
-
-            
-            '''
-                        for r in range(N_parameters):
-                no_burn_iterations = math.floor((k*noBurnInIterations)/noIterations)
-                trace_i = lambda_array[no_burn_iterations:k, r]
-                variance += np.var(trace_i)
-                no_burn_iterations = math.floor((k*noBurnInIterations)/noIterations)
-                v = torch.FloatTensor(lambda_array[no_burn_iterations:k]).to('cuda')
-                variance = torch.sum(torch.var(v,axis=0)).cpu().numpy()
-            '''
+            early_stopping.run(N_parameters, k, num_burn_iterations, num_iterations, lambda_array)
 
             print("#####################################################################")
-            print(" Iteration: " + str(k) + " of : " + str(noIterations) + " completed.")
+            print(" Iteration: " + str(k) + " of : " + str(num_iterations) + " completed.")
             print("")
             print(" Current state of the Markov chain:")
             for i in range(N_parameters):
@@ -210,7 +192,7 @@ def particleMetropolisHastings(observations, initialParameters, noParticles,
                 print(" %.4f" % np.mean(lambda_array[0:k, i]), end = '')
             
             print(" Current acceptance rate:                 " + "%.4f" % np.mean(proposedAccepted[0:k]) +  ".")
-            print("acceptProbability %.4f, Likelihood timestep k: %.4f, Likelihood timestep k-1: %.4f, acceptance probability: %.4f, uniform: %.4f" % (acceptProbability, logLikelihoodProposed[k], logLikelihood[k - 1],
+            print("acceptProbability %.4f, Likelihood timestep k: %.4f, Likelihood timestep k-1: %.4f, acceptance probability: %.4f, uniform: %.4f" % (acceptProbability, log_likelihood_proposed[k], log_likelihood[k - 1],
                 acceptProbability, uniformRandomVariable))
             print("#####################################################################")
             if time_consumed_per_hundred_iterations == 0:
@@ -218,8 +200,6 @@ def particleMetropolisHastings(observations, initialParameters, noParticles,
             
             print("Time consumed per 100 iterations: ", time_consumed_per_hundred_iterations)
 
-
-    
     running_time = time.time() - running_time
     print("Total running time: ", running_time)
     if number_iterations_completed != -1:
@@ -232,8 +212,8 @@ def particleMetropolisHastings(observations, initialParameters, noParticles,
 ##############################################################################
 
 trace_result = particleMetropolisHastings(
-    observations, initialLambda, noParticles, 
-    initialState, particleFilter, noIterations, stepSize)
+    observations, initial_lambda, num_particles, 
+    initial_state, particleFilter, num_iterations, stepSize)
 
 # store result
 with open(data_directory+'/result.json', 'w') as f:
@@ -251,19 +231,22 @@ dir_path = "./images"
 if os.path.isdir(dir_path) == False:
     os.makedirs(dir_path) 
 
+effective_num_iterations = trace_result.shape[0]
+effective_num_burn_iterations = math.floor((effective_num_iterations*num_burn_iterations)/num_iterations)
+
 for t in range(N_parameters):
-    trace = trace_result[noBurnInIterations:noIterations, t]
+    trace = trace_result[effective_num_burn_iterations:effective_num_iterations, t]
     burned_trace_mean[t] = np.sqrt(np.mean( (lambdas[t] - trace) ** 2))
     standard_deviation += np.var(trace)
 
-    noBins = int(np.floor(np.sqrt(noIterations - noBurnInIterations)))
-    grid = np.arange(noBurnInIterations, noIterations, 1)
-    plot(trace, noBins, grid, lambdas[t], dir_path, f"lambda_{t}")
+    num_bins = int(np.floor(np.sqrt(effective_num_iterations - effective_num_burn_iterations)))
+    grid = np.arange(effective_num_burn_iterations, effective_num_iterations, 1)
+    plot(trace, num_bins, grid, lambdas[t], dir_path, f"lambda_{t}")
 
     trace_noburned = trace_result[:, t]
-    noBins2 = int(np.floor(np.sqrt(noIterations)))
-    grid2 = np.arange(0, noIterations, 1)
-    plot(trace_noburned, noBins2, grid2, lambdas[t], dir_path, f"lambda_{t}_noburned")
+    num_bins2 = int(np.floor(np.sqrt(effective_num_iterations)))
+    grid2 = np.arange(0, effective_num_iterations, 1)
+    plot(trace_noburned, num_bins2, grid2, lambdas[t], dir_path, f"lambda_{t}_noburned")
 
 print(f"RMSE: {np.sum(burned_trace_mean)}")
 print(f"Std: {np.sqrt(standard_deviation)}")
