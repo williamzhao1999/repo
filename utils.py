@@ -4,9 +4,9 @@ from pathlib import Path
 from scipy.stats import uniform
 
 import matplotlib.pyplot as plt
-#import pandas as pd
-#import seaborn as sns
-#import torch
+import pandas as pd
+import seaborn as sns
+import torch
 import json
 import math
 import threading
@@ -17,15 +17,15 @@ def update_diag_func(data, label, color):
         plt.axvline(val, ls=':', color=color)
     plt.title(data.name, color=color)
 
-'''
+
 def plot_graph(samples, weights=None, param_names=None,
                   save=False, show=True, xlim=None, ylim=None,
                   filename='pairwise.png'):  # pragma no cover
     #TODO true params on plot #true_params=None,
     
     
-    Plots pairwise distributions of all parameter combos. Color codes each
-    by weight if provided.
+    #Plots pairwise distributions of all parameter combos. Color codes each
+    #by weight if provided.
     
     if param_names is None:
         param_names = [f'p{i}' for i in range(samples.shape[1])]
@@ -70,7 +70,7 @@ def plot_graph(samples, weights=None, param_names=None,
 
 def RMSE(true, pred):
     return np.sqrt(np.mean((true - pred)**2))
-'''
+
 def multiple_logpdfs(x, means, covs):
     """Compute multivariate normal log PDF over multiple sets of parameters.
     """
@@ -98,7 +98,7 @@ def multiple_logpdfs(x, means, covs):
     log2pi     = np.log(2 * np.pi)
     return -0.5 * (dim * log2pi + mahas + logdets)
 
-'''
+
 def multiple_logpdfs_gpu(x, means, covs, device, pi2):
     """Compute multivariate normal log PDF over multiple sets of parameters.
     """
@@ -125,7 +125,7 @@ def multiple_logpdfs_gpu(x, means, covs, device, pi2):
     dim        = torch.tensor(vals[0].size(dim=0)).to(device)
     log2pi     = torch.log(pi2)
     return -torch.tensor(0.5).to(device) * (dim * log2pi + mahas + logdets)
-'''
+
 def plot(trace, noBins, grid, true_value, dir_path, name, burned = True, parameter_name = "lambda"):
 
 
@@ -213,14 +213,14 @@ class EarlyStopping:
 
     def calcVarianceAndVerify(self, N_parameters, k, noBurnInIterations, noIterations, lambda_array):
         
-        #variance = 0
+        variance = 0
         
-        #for r in range(N_parameters):
-        #    no_burn_iterations = math.floor((k*noBurnInIterations)/noIterations)
-        #    trace_i = lambda_array[no_burn_iterations:k, r]
-        #    variance += np.var(trace_i)
+        for r in range(N_parameters):
+            no_burn_iterations = math.floor((k*noBurnInIterations)/noIterations)
+            trace_i = lambda_array[no_burn_iterations:k, r]
+            variance += np.var(trace_i)
         
-
+        '''
         # for testing
         if k == 100:
             variance = 100
@@ -234,7 +234,8 @@ class EarlyStopping:
             variance = 50
         else:
             variance = 60
-        #'''
+        #
+        '''
         return self.verify(variance)
 
     def verify(self, new_variance): # True stop, False no stop
