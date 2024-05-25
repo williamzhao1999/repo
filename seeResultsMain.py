@@ -15,7 +15,7 @@ from scipy import stats
 import os
 import math
 
-f = open('./result_100000.json')
+f = open('./result_1000.json')
 results = np.array(json.load(f))
 f.close()
 
@@ -23,8 +23,23 @@ f = open('./data/standard_graph/lambdas.json')
 lambdas = np.array(json.load(f))
 f.close()
 
-N_parameters = lambdas.shape[0]
+f = open('./data/standard_graph/log_likelihood_proposed.json')
+log_likelihood_proposed = np.array(json.load(f))
+f.close()
 
+f = open('./data/standard_graph/log_likelihood.json')
+log_likelihood = np.array(json.load(f))
+f.close()
+
+f = open('./data/standard_graph/acceptance_rate.json')
+acceptance_rate = np.array(json.load(f))
+f.close()
+
+
+
+
+
+N_parameters = lambdas.shape[0]
 
 num_iterations = results.shape[0]
 num_burn_iterations = math.floor((num_iterations*10000)/100000)
@@ -49,7 +64,6 @@ for t in range(N_parameters):
     lambdas_results[t] = np.mean(trace)
     burned_trace_mean[t] = (lambdas[t] - lambdas_results[t]) ** 2
     
-
     noBins = int(np.floor(np.sqrt(num_iterations - num_burn_iterations)))
     grid = np.arange(num_burn_iterations, num_iterations, 1)
     plot(trace, noBins, grid, lambdas[t], dir_path + "/" + str(num_iterations) + "/", f"lambda_{t}")
@@ -125,4 +139,22 @@ plt.plot(np.sqrt(VAR), color='#7570B3')
 plt.xlabel("iteration")
 plt.ylabel("STD")
 plt.savefig(f"{dir_path}/STD.png")
+plt.close()
+
+plt.plot(log_likelihood_proposed, color='#7570B3')
+plt.xlabel("iteration")
+plt.ylabel("Log Likelihood Proposed")
+plt.savefig(f"{dir_path}/log_likelihood_proposed.png")
+plt.close()
+
+plt.plot(log_likelihood, color='#7570B3')
+plt.xlabel("iteration")
+plt.ylabel("Log Likelihood")
+plt.savefig(f"{dir_path}/log_likelihood.png")
+plt.close()
+
+plt.plot(acceptance_rate, color='#7570B3')
+plt.xlabel("iteration")
+plt.ylabel("Acceptance Rate")
+plt.savefig(f"{dir_path}/acceptance_rate.png")
 plt.close()

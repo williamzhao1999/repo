@@ -60,8 +60,8 @@ np.random.seed(10)
 num_observations = 250
 initial_lambda = np.ones(N_parameters) * 0
 num_particles = 251 
-num_burn_iterations = 1
-num_iterations = 100
+num_burn_iterations = 10
+num_iterations = 1000
 stepSize = np.eye(N_parameters) * (0.10**2)
 
 initial_state = 0
@@ -71,7 +71,7 @@ yhatVariance = np.zeros((num_particles, y_length, y_length))
 for i in range(num_particles):
     yhatVariance[i] = cov
 
-early_stopping = EarlyStopping(stop_after_iterations=2)
+early_stopping = EarlyStopping(stop_after_iterations=1)
 
 print(f"A matrix shape: {A_matrix.shape}, B matrix shape: {B_matrix.shape}, H matrix shape: {H_matrix.shape}")
 

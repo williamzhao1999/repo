@@ -153,11 +153,11 @@ def plot(trace, noBins, grid, true_value, dir_path, name, burned = True, paramet
 
 def saveResults(dir_path, num_iterations, log_likelihood, acceptance_rate, log_likelihood_proposed):
     with open(dir_path+  f'/log_likelihood.json', 'w') as f:
-        json.dump(log_likelihood[0:num_iterations], f)
+        json.dump(log_likelihood[0:num_iterations].tolist(), f)
     with open(dir_path+  f'/acceptance_rate.json', 'w') as f:
-        json.dump(acceptance_rate[0:num_iterations], f)
+        json.dump(acceptance_rate[0:num_iterations].tolist(), f)
     with open(dir_path+  f'/log_likelihood_proposed.json', 'w') as f:
-        json.dump(log_likelihood_proposed[0:num_iterations], f)
+        json.dump(log_likelihood_proposed[0:num_iterations].tolist(), f)
 
 def generateData(noObservations, initialState, x_length, y_length, A, B, u, H):
     state = np.zeros((noObservations + 1, x_length))
@@ -213,15 +213,15 @@ class EarlyStopping:
 
     def calcVarianceAndVerify(self, N_parameters, k, noBurnInIterations, noIterations, lambda_array):
         
-        variance = 0
+        #variance = 0
         
-        for r in range(N_parameters):
-            no_burn_iterations = math.floor((k*noBurnInIterations)/noIterations)
-            trace_i = lambda_array[no_burn_iterations:k, r]
-            variance += np.var(trace_i)
+        #for r in range(N_parameters):
+        #    no_burn_iterations = math.floor((k*noBurnInIterations)/noIterations)
+        #    trace_i = lambda_array[no_burn_iterations:k, r]
+        #    variance += np.var(trace_i)
         
 
-        ''' for testing
+        # for testing
         if k == 100:
             variance = 100
         elif k == 200:
@@ -234,7 +234,7 @@ class EarlyStopping:
             variance = 50
         else:
             variance = 60
-        '''
+        #'''
         return self.verify(variance)
 
     def verify(self, new_variance): # True stop, False no stop
