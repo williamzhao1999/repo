@@ -60,8 +60,8 @@ np.random.seed(10)
 num_observations = 250
 initial_lambda = np.ones(N_parameters) * 0
 num_particles = 251 
-num_burn_iterations = 10
-num_iterations = 1000
+num_burn_iterations = 10000
+num_iterations = 100000
 stepSize = np.eye(N_parameters) * (0.10**2)
 
 initial_state = 0
@@ -84,38 +84,50 @@ def particleFilter(observations, parameters, num_particles, initial_state):
     num_observations = num_observations - 1
 
     particles = np.zeros((num_particles, num_observations, x_length))
-    ancestorIndices = np.zeros((num_particles, num_observations, x_length))
+    #ancestor_indices = np.zeros((num_particles, num_observations, x_length))
     weights = np.zeros((num_particles, num_observations))
     normalisedWeights = np.zeros((num_particles, num_observations))
     xHatFiltered = np.zeros((num_observations, 1, x_length))
 
-    # Set the initial state and weights
-    #initialization_ancestors = range(num_particles)
-    #for i in range(x_length):
-    #    ancestorIndices[:, 0, i] = initialization_ancestors
+    #initialization_ancestors = np.arange(num_particles)
+
+    # Use broadcasting to set the initial ancestors across all x_length dimensions
+    #ancestor_indices[:, 0, :] = initialization_ancestors[:, np.newaxis]
 
     particles[:, 0] = initial_state
     xHatFiltered[0] = initial_state
     normalisedWeights[:, 0] = 1.0 / num_particles
     log_likelihood = 0
+    
 
     for t in range(1, num_observations):
+
+        newAncestors = choice(num_particles, num_particles, p=normalisedWeights[:, t - 1], replace=True)
     
-        x = particles[: ,t-1]
+        x = particles[newAncestors ,t-1]
         trans = np.matmul(A[t-1], x.T)
         u = B[t-1] @ parameters
 
-        particles[:, t] = trans.T + u.T
+        v = randn(num_particles, x_length) * 0.001
+        particles[:, t] = (trans.T + u.T) + v
 
         yhatMean = particles[:, t] @ H[t].T
         
         weights[:, t] = multiple_logpdfs(observations[t + 1], yhatMean, yhatVariance)
 
+        maxWeight  = np.max(weights[:, t])
+        weights[:, t] = weights[:, t] - maxWeight
         sumWeights = logsumexp(weights[:, t])
+        
+        normalisedWeights[:, t] = np.exp(weights[:, t]  - sumWeights)
+
+        # Estimate the state
+        #xHatFiltered[t] = np.sum(normalisedWeights[:, t] * particles[:, t])
 
         # Estimate log-likelihood
-        predictiveLikelihood = sumWeights - np.log(num_particles)
-        log_likelihood += predictiveLikelihood
+        predictive_likelihood = maxWeight + sumWeights - np.log(num_particles)
+        #predictiveLikelihood = sumWeights - noParticles
+        log_likelihood += predictive_likelihood
 
     return xHatFiltered, log_likelihood
 
@@ -140,7 +152,7 @@ def particleMetropolisHastings(observations, initialParameters, num_particles,
     lambda_array[0] = initialParameters
     
     _, log_likelihood[0] = particleFilter(observations, initialParameters, num_particles, initial_state)
-
+    
     
     number_iterations_completed = -1
     for k in range(1, num_iterations):
@@ -151,10 +163,10 @@ def particleMetropolisHastings(observations, initialParameters, num_particles,
         _, log_likelihood_proposed[k] = particleFilter(observations, lambda_proposed[k], num_particles, initial_state)
         
         # Assume uniform prior, so it cancels out in the acceptance ratio
-        accept_probability = np.min((0.0,  log_likelihood_proposed[k] - log_likelihood[k - 1]))
+        accept_probability = np.min((1.0,  np.exp(log_likelihood_proposed[k] - log_likelihood[k - 1])))
         
         # Accept / reject step
-        uniform_random_variable = np.log(uniform())
+        uniform_random_variable = uniform()
         if uniform_random_variable < accept_probability:
             # Accept the parameter
             lambda_array[k] = lambda_proposed[k]
@@ -166,15 +178,15 @@ def particleMetropolisHastings(observations, initialParameters, num_particles,
             log_likelihood[k] = log_likelihood[k - 1]
             proposed_accepted[k] = 0.0
 
-        if early_stopping.check():
-            number_iterations_completed = k
-            print("Maximum perfomance reached, early stopping activated")
-            break
+        #if early_stopping.check():
+        #    number_iterations_completed = k
+        #    print("Maximum perfomance reached, early stopping activated")
+        #    break
             
         # Write out progress
         if np.remainder(k, 100) == 0:
             
-            early_stopping.run(N_parameters, k, num_burn_iterations, num_iterations, lambda_array)
+            #early_stopping.run(N_parameters, k, num_burn_iterations, num_iterations, lambda_array)
 
             print("#####################################################################")
             print(" Iteration: " + str(k) + " of : " + str(num_iterations) + " completed.")

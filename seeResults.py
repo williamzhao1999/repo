@@ -15,7 +15,7 @@ from scipy import stats
 import os
 import math
 
-f = open('./result_57000.json')
+f = open('./result_choice.json')
 results = np.array(json.load(f))
 f.close()
 

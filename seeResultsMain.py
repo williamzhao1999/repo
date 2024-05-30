@@ -15,29 +15,13 @@ from scipy import stats
 import os
 import math
 
-f = open('./result_1000.json')
+f = open('./result_choice.json')
 results = np.array(json.load(f))
 f.close()
 
 f = open('./data/standard_graph/lambdas.json')
 lambdas = np.array(json.load(f))
 f.close()
-
-f = open('./data/standard_graph/log_likelihood_proposed.json')
-log_likelihood_proposed = np.array(json.load(f))
-f.close()
-
-f = open('./data/standard_graph/log_likelihood.json')
-log_likelihood = np.array(json.load(f))
-f.close()
-
-f = open('./data/standard_graph/acceptance_rate.json')
-acceptance_rate = np.array(json.load(f))
-f.close()
-
-
-
-
 
 N_parameters = lambdas.shape[0]
 
@@ -126,35 +110,17 @@ with open(dir_path+f'/best/lambdas.json', 'w') as f:
 plt.plot(RMSE, color='#7570B3')
 plt.xlabel("iteration")
 plt.ylabel("RMSE")
-plt.savefig(f"{dir_path}/RMSE.png")
+plt.savefig(f"{dir_path}/RMSE2.png")
 plt.close()
 
 plt.plot(VAR, color='#7570B3')
 plt.xlabel("iteration")
 plt.ylabel("Variance")
-plt.savefig(f"{dir_path}/VAR.png")
+plt.savefig(f"{dir_path}/VAR2.png")
 plt.close()
 
 plt.plot(np.sqrt(VAR), color='#7570B3')
 plt.xlabel("iteration")
 plt.ylabel("STD")
-plt.savefig(f"{dir_path}/STD.png")
-plt.close()
-
-plt.plot(log_likelihood_proposed, color='#7570B3')
-plt.xlabel("iteration")
-plt.ylabel("Log Likelihood Proposed")
-plt.savefig(f"{dir_path}/log_likelihood_proposed.png")
-plt.close()
-
-plt.plot(log_likelihood, color='#7570B3')
-plt.xlabel("iteration")
-plt.ylabel("Log Likelihood")
-plt.savefig(f"{dir_path}/log_likelihood.png")
-plt.close()
-
-plt.plot(acceptance_rate, color='#7570B3')
-plt.xlabel("iteration")
-plt.ylabel("Acceptance Rate")
-plt.savefig(f"{dir_path}/acceptance_rate.png")
+plt.savefig(f"{dir_path}/STD2.png")
 plt.close()

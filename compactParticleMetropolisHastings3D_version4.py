@@ -18,7 +18,7 @@ A = np.array([[0.00028499273280664547, 5.878122876425919e-05, 0.0, 0.0, 0.0, 0.0
 B = np.array([[0.005555555555555556, 0.0, 0.0], [0.0, 0.005555555555555556, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.005555555555555556], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]])
 H = np.array([[1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0]])
 lambda_poisson = np.array([1, 50, 20])
-epislon = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+epislon = np.array([0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001])
 omega = np.array([0.10, 0.10, 0.10, 0.10])
 
 data_directory = "data/mini_graph"
@@ -60,9 +60,9 @@ initialState = 0
 initialLambda = [0, 0, 0]
 
 noParticles = 251           # Use noParticles ~ noObservations
-noBurnInIterations = 10
-noIterations = 100
-stepSize = np.diag((0.10**2, 0.10**2, 0.10**2))
+noBurnInIterations = 1000
+noIterations = 10000
+stepSize = np.diag((1, 1, 1))
 
 N = 3
 
@@ -94,7 +94,7 @@ for i in range(noParticles):
 ##############################################################################
 # PMH
 ##############################################################################
-
+transition_matrix = None
 ##############################################################################
 # Fully-adapted particle filter for the linear Gaussian SSM
 ##############################################################################
@@ -125,31 +125,33 @@ def particleFilter(observations, parameters, noParticles, initialState):
 
     for t in range(1, noObservations):
         # Resample (multinomial)
-        #newAncestors = choice(noParticles, noParticles, p=normalisedWeights[:, t - 1], replace=True)
+        newAncestors = choice(noParticles, noParticles, p=normalisedWeights[:, t - 1], replace=True)
         #ancestorIndices[:, 1:t - 1] = ancestorIndices[newAncestors, 1:t - 1]
         #ancestorIndices[:, t] = newAncestors
 
-        x = particles[: ,t-1]
-        trans = np.matmul(A[t-1], x.T)
+        x = particles[newAncestors ,t-1]
+        trans = np.matmul(transition_matrix, x.T)
         u = B[t-1] @ parameters
 
         v = randn(noParticles, 12) * epislon
-        particles[:, t] = (trans.T + u.T)
+        particles[:, t] = (trans.T + u.T) + v
         #particles[:, t] = particles[:, t] * v
 
         yhatMean = particles[:, t] @ H[t].T
         
         weights[:, t] = multiple_logpdfs(observations[t + 1], yhatMean, yhatVariance)
 
-
+        maxWeight  = np.max(weights[:, t])
+        weights[:, t] = weights[:, t] - maxWeight
         sumWeights = logsumexp(weights[:, t])
-        #normalisedWeights[:, t] = weights[:, t] - sumWeights
+        
+        normalisedWeights[:, t] = np.exp(weights[:, t]  - sumWeights)
 
         # Estimate the state
         #xHatFiltered[t] = np.sum(normalisedWeights[:, t] * particles[:, t])
 
         # Estimate log-likelihood
-        predictiveLikelihood = sumWeights - np.log(noParticles)
+        predictiveLikelihood = maxWeight + sumWeights - np.log(noParticles)
         #predictiveLikelihood = sumWeights - noParticles
         logLikelihood += predictiveLikelihood
 
@@ -162,6 +164,7 @@ def particleMetropolisHastings(observations, initialParameters, noParticles,
         initialState, particleFilter, noIterations, stepSize):
 
     global time_consumed_per_hundred_iterations
+    global transition_matrix
     running_time = time.time()
 
     lambda_array = np.zeros((noIterations, 3))
@@ -173,14 +176,18 @@ def particleMetropolisHastings(observations, initialParameters, noParticles,
     initialParameters = np.array(initialParameters)
     # Set the initial parameter and estimate the initial log-likelihood
     lambda_array[0] = initialParameters
+
+    transition_matrix = np.random.random((12, 12)) * 0.001
     
     _, logLikelihood[0] = particleFilter(observations, initialParameters, noParticles, initialState)
+
+    transition_matrix_accepted = transition_matrix
     
     start_time = time.time()
     for k in range(1, noIterations):
         # Propose a new parameter
         
-
+        transition_matrix = np.random.normal(loc=transition_matrix_accepted, scale=0.001)
         lambda_proposed[k, :] = lambda_array[k - 1, :] + multivariate_normal(mean = np.zeros(3), cov = stepSize)
         prior = 0
         #for i in range(N):
@@ -200,6 +207,7 @@ def particleMetropolisHastings(observations, initialParameters, noParticles,
             # Accept the parameter
             lambda_array[k] = lambda_proposed[k]
             logLikelihood[k] = logLikelihoodProposed[k]
+            transition_matrix_accepted = transition_matrix
             proposedAccepted[k] = 1.0
         else:
             # Reject the parameter
@@ -288,3 +296,38 @@ def observationProposalDistribution():
     pass
 def particleProposalDistribution():
     pass
+
+'''
+    for t in range(1, noObservations):
+        # Resample (multinomial)
+        newAncestors = choice(noParticles, noParticles, p=normalisedWeights[:, t - 1], replace=True)
+        #ancestorIndices[:, 1:t - 1] = ancestorIndices[newAncestors, 1:t - 1]
+        #ancestorIndices[:, t] = newAncestors
+
+        x = particles[newAncestors ,t-1]
+        trans = np.matmul(A[t-1], x.T)
+        u = B[t-1] @ parameters
+
+        v = randn(noParticles, 12) * epislon
+        particles[:, t] = (trans.T + u.T) + v
+        #particles[:, t] = particles[:, t] * v
+
+        yhatMean = particles[:, t] @ H[t].T
+        
+        weights[:, t] = multiple_logpdfs(observations[t + 1], yhatMean, yhatVariance)
+
+        maxWeight  = np.max(weights[:, t])
+        weights[:, t] = weights[:, t] - maxWeight
+        sumWeights = logsumexp(weights[:, t])
+        
+        normalisedWeights[:, t] = np.exp(weights[:, t]  - sumWeights)
+
+        # Estimate the state
+        #xHatFiltered[t] = np.sum(normalisedWeights[:, t] * particles[:, t])
+
+        # Estimate log-likelihood
+        predictiveLikelihood = maxWeight + sumWeights - np.log(noParticles)
+        #predictiveLikelihood = sumWeights - noParticles
+        logLikelihood += predictiveLikelihood
+
+'''

@@ -554,43 +554,43 @@ class CTM:
         print("All files are successfully saved!")
 
 
-pos = {"O1": (35, 40), "O2": (15, 30), "O3": (55, 40), "D1": (110, 20), "D2": (85, 10), "D3": (110,30), "D4": (35,30),
-       "D5": (35, 20), "D6": (55,20), "D7": (55, 30), "D8": (85,30), "D9":(85,20), "D10": (55,10)}
+pos = {"D4": (35, 40), "O1": (15, 30), "D5": (55, 40), "D1": (110, 20), "D2": (85, 10), "D3": (110,30), "D2": (35,30),
+       "D3": (35, 20), "D6": (55,20), "D7": (55, 30), "D8": (85,30), "D9":(85,20), "D10": (55,10)}
 # Create the graph as same the paper
 G = nx.DiGraph()
 
 # Add nodes to directed graph
 G.add_nodes_from([
-                ("O1", {"label": "O1", "index":0}), 
-                ("O2", {"label": "O2", "index":1}), 
-                ("O3", {"label": "O3", "index":2}), 
-                ("D4", {"label": "D4", "index":3}),
-                ("D5", {"label": "D5", "index":4}),
+                ("O1", {"label": "1", "index":0}), 
+                ("D2", {"label": "2", "index":1}), 
+                ("D3", {"label": "3", "index":2}), 
+                ("D4", {"label": "4", "index":3}),
+                ("D5", {"label": "5", "index":4}),
                 ])
 
 # Add edges to the graph
 G.add_edges_from([
-                  ("O2", "D4"),
-                  ("O2", "D5"),
-                  ("O1", "O3"),
-                  ("D4", "O1"),
+                  ("O1", "D2"),
+                  ("O1", "D3"),
+                  ("D2", "D4"),
+                  ("D4", "D5"),
                 ])
 
 
 #edges labels
 edges_labels = {
-                  ("O2", "D4"): 0,
-                  ("O2", "D5"): 1, 
-                  ("O1", "O3"): 2,
-                  ("D4", "O1"): 3,
+                  ("O1", "D2"): 0,
+                  ("O1", "D3"): 1, 
+                  ("D2", "D4"): 2,
+                  ("D4", "D5"): 3,
                 }
 
 # attributes for edges
 attrs = {
-            ("O2", "D4"): {"label":0,"type_upstream_connection":"entering", "type_downstream_connection": "diverging"},
-            ("O2", "D5"): {"label":1,"type_upstream_connection":"entering", "type_downstream_connection": "exiting"},
-            ("O1", "O3"): {"label":2,"type_upstream_connection":"ordinary", "type_downstream_connection": "exiting"},
-            ("D4", "O1"): {"label":3,"type_upstream_connection":"ordinary", "type_downstream_connection": "diverging"},
+            ("O1", "D2"): {"label":0,"type_upstream_connection":"entering", "type_downstream_connection": "diverging"},
+            ("O1", "D3"): {"label":1,"type_upstream_connection":"entering", "type_downstream_connection": "exiting"},
+            ("D2", "D4"): {"label":2,"type_upstream_connection":"ordinary", "type_downstream_connection": "exiting"},
+            ("D4", "D5"): {"label":3,"type_upstream_connection":"ordinary", "type_downstream_connection": "diverging"},
         
 }
 
@@ -598,12 +598,12 @@ attrs = {
 
 # paths in the graph like in the paper 
 paths = [
-    # (1) Dashed yellow
-    [("O2","D4"), ("D4", "O1"), ("O1","O3")],
-    # (2) Viola
-    [("O2", "D4"), ("D4", "O1")],
-    # (3) Rose
-    [("O2", "D5")]
+    # (1) Blue
+    [("O1","D2"), ("D2", "D4"), ("D4","D5")],
+    # (2) Red
+    [("O1", "D2"), ("D2", "D4")],
+    # (3) Green
+    [("O1", "D3")]
 ]
 
 # Set the attributes to edges and draw the graph on plot
