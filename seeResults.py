@@ -112,6 +112,12 @@ plt.ylabel("RMSE")
 plt.savefig(f"{dir_path}/RMSE.png")
 plt.close()
 
+plt.plot(RMSE[0:trace_min], color='#7570B3')
+plt.xlabel("iteration")
+plt.ylabel("Best RMSE")
+plt.savefig(f"{dir_path}/Best_RMSE.png")
+plt.close() 
+
 plt.plot(VAR, color='#7570B3')
 plt.xlabel("iteration")
 plt.ylabel("Variance")

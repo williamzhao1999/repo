@@ -62,7 +62,7 @@ initialLambda = [0, 0, 0]
 noParticles = 251           # Use noParticles ~ noObservations
 noBurnInIterations = 1000
 noIterations = 10000
-stepSize = np.diag((1, 1, 1))
+stepSize = np.diag((0.1, 0.1, 0.1))
 
 N = 3
 
@@ -186,10 +186,12 @@ def particleMetropolisHastings(observations, initialParameters, noParticles,
     start_time = time.time()
     for k in range(1, noIterations):
         # Propose a new parameter
+
+        if k == 50000:
+            stepSize = np.diag((0.01, 0.01, 0.01))
         
         transition_matrix = np.random.normal(loc=transition_matrix_accepted, scale=0.001)
         lambda_proposed[k, :] = lambda_array[k - 1, :] + multivariate_normal(mean = np.zeros(3), cov = stepSize)
-        prior = 0
         #for i in range(N):
         #    prior += (gamma.logpdf(lambda_proposed[k, i], 1) - gamma.logpdf(lambda_array[k - 1, i], 1))
 
@@ -198,10 +200,10 @@ def particleMetropolisHastings(observations, initialParameters, noParticles,
 
         #sigmav prior
         # Compute the acceptance probability
-        acceptProbability = np.min((0.0, logLikelihoodProposed[k] - logLikelihood[k - 1]))
+        acceptProbability = np.min((1.0, np.exp(logLikelihoodProposed[k] - logLikelihood[k - 1])))
         
         # Accept / reject step
-        uniformRandomVariable = np.log(uniform())
+        uniformRandomVariable = uniform()
         if uniformRandomVariable < acceptProbability:
             
             # Accept the parameter
